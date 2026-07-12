@@ -109,6 +109,21 @@ English is her second language. When editing, preserve these conventions:
     cursor: pointer;
   }
   body.quiz-mode .entry .gotit { display: inline-block; }
+  .lvl {
+    display: none;
+    margin-top: 0.5rem;
+    margin-right: 0.4rem;
+    font-size: 0.78rem;
+    padding: 0.25rem 0.6rem;
+    border: 1px solid #2f7d5d;
+    border-radius: 999px;
+    background: none;
+    color: #2f7d5d;
+    cursor: pointer;
+  }
+  .entry.flipped .lvl { display: inline-block; }
+  body.quiz-mode .entry .lvl { display: inline-block; }
+  .lvl-badge { color: #2f7d5d; font-size: 0.8rem; margin-left: 0.35rem; }
   #quiz-done {
     background: var(--card);
     border: 1px solid var(--line);
@@ -1322,6 +1337,10 @@ English is her second language. When editing, preserve these conventions:
 
   var LS_DELETED = 'glossaryDeleted';
   var LS_CUSTOM = 'glossaryCustom';
+  var LS_LEVELS = 'glossaryLevels';
+  function lsGetObj(key) {
+    try { return JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { return {}; }
+  }
   function lsGet(key) {
     try { return JSON.parse(localStorage.getItem(key)) || []; } catch (e) { return []; }
   }
@@ -1334,6 +1353,7 @@ English is her second language. When editing, preserve these conventions:
 
   var deletedIds = lsGet(LS_DELETED);
   var customCards = lsGet(LS_CUSTOM);
+  var levels = lsGetObj(LS_LEVELS); // card id -> 1 or 2 ("I know this" level)
 
   // --- Card setup (flip, delete button, keyboard) ---
   function initEntry(e) {
@@ -1343,6 +1363,18 @@ English is her second language. When editing, preserve these conventions:
       got.type = 'button';
       got.textContent = '✔ got it';
       e.appendChild(got);
+    }
+    if (!e.querySelector('.lvl')) {
+      var lvl = document.createElement('button');
+      lvl.className = 'lvl';
+      lvl.type = 'button';
+      e.appendChild(lvl);
+    }
+    if (!e.querySelector('.lvl-badge')) {
+      var badge = document.createElement('span');
+      badge.className = 'lvl-badge';
+      var termEl = e.querySelector('.term');
+      if (termEl) termEl.appendChild(badge);
     }
     if (!e.querySelector('.del')) {
       var del = document.createElement('button');
@@ -1357,6 +1389,7 @@ English is her second language. When editing, preserve these conventions:
     e.addEventListener('click', function (ev) {
       if (ev.target.closest('.del')) { deleteEntry(e); return; }
       if (ev.target.closest('.gotit')) { quizGotIt(e); return; }
+      if (ev.target.closest('.lvl')) { levelUp(e); return; }
       e.classList.toggle('flipped');
     });
     e.addEventListener('keydown', function (ev) {
@@ -1372,10 +1405,45 @@ English is her second language. When editing, preserve these conventions:
       if (!sectionOrder[home.id]) sectionOrder[home.id] = [];
       sectionOrder[home.id].push(e);
     }
+    applyLevel(e);
+  }
+
+  // --- "I know this" levels: 1 = less often in quizzes, 2 = rarely, 3rd press = remove ---
+  function applyLevel(e) {
+    var lv = levels[e.dataset.id] || 0;
+    var btn = e.querySelector('.lvl');
+    if (btn) {
+      btn.textContent = lv === 0 ? 'know it ○○' : lv === 1 ? 'know it well ●○' : 'mastered ●● — remove';
+    }
+    var badge = e.querySelector('.lvl-badge');
+    if (badge) badge.textContent = lv > 0 ? ' ' + '●'.repeat(lv) : '';
+  }
+
+  function levelUp(e) {
+    var lv = levels[e.dataset.id] || 0;
+    if (lv >= 2) {
+      if (!confirm('You have marked this card as known twice already. Remove it for good? (You can bring it back with "Restore removed cards".)')) return;
+      doDelete(e);
+      return;
+    }
+    levels[e.dataset.id] = lv + 1;
+    lsSet(LS_LEVELS, levels);
+    applyLevel(e);
+    // in a quiz, "know it" also checks the card off the current round
+    if (document.body.classList.contains('quiz-mode') && e.closest('section') && e.closest('section').id === 'quiz') {
+      quizGotIt(e);
+    }
+    updateProgress();
   }
 
   function deleteEntry(e) {
     if (!confirm('Remove this card? You can bring built-in cards back with "Restore removed cards".')) return;
+    doDelete(e);
+  }
+
+  function doDelete(e) {
+    delete levels[e.dataset.id];
+    lsSet(LS_LEVELS, levels);
     if (e.dataset.custom) {
       customCards = customCards.filter(function (c) { return String(c.id) !== e.dataset.id; });
       lsSet(LS_CUSTOM, customCards);
@@ -1395,8 +1463,9 @@ English is her second language. When editing, preserve these conventions:
     var learnt = lsGet(LS_DELETED).length;
     var total = entries.length + learnt;
     var pct = total ? Math.round(learnt / total * 100) : 0;
+    var almost = entries.filter(function (e) { return (levels[e.dataset.id] || 0) > 0; }).length;
     document.getElementById('progress-label').textContent =
-      learnt + ' of ' + total + ' cards learnt (' + pct + '%)';
+      learnt + ' of ' + total + ' cards learnt (' + pct + '%)' + (almost ? ' · ' + almost + ' almost there' : '');
     document.getElementById('progress-fill').style.width = pct + '%';
   }
 
@@ -1465,7 +1534,8 @@ English is her second language. When editing, preserve these conventions:
   document.getElementById('export-btn').addEventListener('click', function () {
     document.getElementById('backup-data').value = JSON.stringify({
       custom: lsGet(LS_CUSTOM),
-      deleted: lsGet(LS_DELETED)
+      deleted: lsGet(LS_DELETED),
+      levels: lsGetObj(LS_LEVELS)
     });
     document.getElementById('backup-data').select();
   });
@@ -1474,6 +1544,7 @@ English is her second language. When editing, preserve these conventions:
       var data = JSON.parse(document.getElementById('backup-data').value);
       if (data.custom) lsSet(LS_CUSTOM, data.custom);
       if (data.deleted) lsSet(LS_DELETED, data.deleted);
+      if (data.levels) lsSet(LS_LEVELS, data.levels);
       location.reload();
     } catch (e) {
       alert('That does not look like a valid backup. Paste exactly what Export produced.');
@@ -1511,12 +1582,25 @@ English is her second language. When editing, preserve these conventions:
     filter(); // clear any search filtering
     var n = parseInt(document.getElementById('quiz-count').value, 10);
     if (!n || n < 1) n = 20;
-    var pool = entries.slice();
-    for (var i = pool.length - 1; i > 0; i--) { // shuffle
-      var j = Math.floor(Math.random() * (i + 1));
-      var t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+    // Weighted random pick: level-1 cards appear a third as often, level-2 cards rarely
+    function weightOf(e) {
+      var lv = levels[e.dataset.id] || 0;
+      return lv === 2 ? 0.08 : lv === 1 ? 0.33 : 1;
     }
-    var pick = pool.slice(0, Math.min(n, pool.length));
+    var pool = entries.slice();
+    var pick = [];
+    var count = Math.min(n, pool.length);
+    while (pick.length < count && pool.length) {
+      var total = 0, i;
+      for (i = 0; i < pool.length; i++) total += weightOf(pool[i]);
+      var r = Math.random() * total;
+      var chosen = pool.length - 1;
+      for (i = 0; i < pool.length; i++) {
+        r -= weightOf(pool[i]);
+        if (r <= 0) { chosen = i; break; }
+      }
+      pick.push(pool.splice(chosen, 1)[0]);
+    }
     pick.forEach(function (e) {
       e.classList.remove('flipped');
       quizSec.appendChild(e);
@@ -1605,6 +1689,7 @@ English is her second language. When editing, preserve these conventions:
       var wasFlipped = entry.classList.contains('flipped');
       entry.innerHTML = entry.dataset.orig; // reset highlights
       entry.classList.toggle('flipped', wasFlipped); // keep flip state as the user left it
+      applyLevel(entry); // re-render level button and dots
       var match = !q || termText(entry).indexOf(q) !== -1;
       entry.classList.toggle('hidden', !match);
       if (match && q) highlightTerm(entry, q);
