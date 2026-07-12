@@ -75,6 +75,41 @@ English is her second language. When editing, preserve these conventions:
     background: var(--card);
     border: 1px solid var(--line);
   }
+  #quiz-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+  #quiz-bar button {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  #quiz-btn { background: #4a5fa5 !important; color: #fff !important; border-color: #4a5fa5 !important; }
+  #quiz-count {
+    width: 4.2rem;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.85rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--card);
+    color: var(--ink);
+    text-align: center;
+  }
+  #quiz { --accent: #4a5fa5; display: none; }
+  body.quiz-mode #quiz { display: block; }
+  body.quiz-mode section:not(#quiz),
+  body.quiz-mode nav,
+  body.quiz-mode .searchbox,
+  body.quiz-mode #no-results,
+  body.quiz-mode #add-card,
+  body.quiz-mode #toggle-all { display: none; }
   #toggle-all, #restore-cards {
     font-size: 0.85rem;
     padding: 0.35rem 0.8rem;
@@ -249,6 +284,13 @@ English is her second language. When editing, preserve these conventions:
 <h1>Business English Glossary</h1>
 <p class="howto"><strong>How to use:</strong> each card shows only the English term — tap it to flip and reveal the meaning. Browse one section at a time; no need to memorise anything.</p>
 <button id="toggle-all" type="button">Reveal all</button>
+<div id="quiz-bar">
+  <button id="quiz-btn" type="button">🔀 Random quiz</button>
+  <input id="quiz-count" type="number" value="20" min="1" max="500" aria-label="Number of cards">
+  <span style="font-size:0.85rem;color:var(--muted);">cards</span>
+  <button id="quiz-new" type="button" hidden>New cards</button>
+  <button id="quiz-exit" type="button" hidden>Exit quiz</button>
+</div>
 <details id="add-card">
   <summary>+ Add your own card</summary>
   <input id="new-term" placeholder="English term" autocomplete="off">
@@ -278,6 +320,10 @@ English is her second language. When editing, preserve these conventions:
   <a href="#uni">University life</a>
 </nav>
 </header>
+
+<section id="quiz">
+<h2>Random quiz — tap a card to check yourself</h2>
+</section>
 
 <section id="econ">
 <h2>Economics</h2>
@@ -1202,9 +1248,10 @@ English is her second language. When editing, preserve these conventions:
   var input = document.getElementById('search');
   var clearBtn = document.getElementById('clear-search');
   var noResults = document.getElementById('no-results');
-  var sections = Array.prototype.slice.call(document.querySelectorAll('section'));
+  var sections = Array.prototype.slice.call(document.querySelectorAll('section:not(#quiz)'));
   var entries = [];
   var allRevealed = false;
+  var sectionOrder = {}; // section id -> entries in original order, for restoring after a quiz
 
   var LS_DELETED = 'glossaryDeleted';
   var LS_CUSTOM = 'glossaryCustom';
@@ -1244,6 +1291,12 @@ English is her second language. When editing, preserve these conventions:
       }
     });
     entries.push(e);
+    var home = e.closest('section');
+    if (home && home.id !== 'quiz') {
+      e.dataset.home = home.id;
+      if (!sectionOrder[home.id]) sectionOrder[home.id] = [];
+      sectionOrder[home.id].push(e);
+    }
   }
 
   function deleteEntry(e) {
@@ -1336,6 +1389,56 @@ English is her second language. When editing, preserve these conventions:
       alert('That does not look like a valid backup. Paste exactly what Export produced.');
     }
   });
+
+  // --- Random quiz mode ---
+  var quizSec = document.getElementById('quiz');
+  var quizBtn = document.getElementById('quiz-btn');
+  var quizNew = document.getElementById('quiz-new');
+  var quizExit = document.getElementById('quiz-exit');
+
+  function startQuiz() {
+    restoreFromQuiz();
+    input.value = '';
+    filter(); // clear any search filtering
+    var n = parseInt(document.getElementById('quiz-count').value, 10);
+    if (!n || n < 1) n = 20;
+    var pool = entries.slice();
+    for (var i = pool.length - 1; i > 0; i--) { // shuffle
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+    }
+    pool.slice(0, Math.min(n, pool.length)).forEach(function (e) {
+      e.classList.remove('flipped');
+      quizSec.appendChild(e);
+    });
+    document.body.classList.add('quiz-mode');
+    quizBtn.textContent = '🔀 Quiz running…';
+    quizNew.hidden = false;
+    quizExit.hidden = false;
+    if (quizSec.scrollIntoView) quizSec.scrollIntoView();
+  }
+
+  function restoreFromQuiz() {
+    Object.keys(sectionOrder).forEach(function (id) {
+      var sec = document.getElementById(id);
+      var anchor = sec.querySelector('.top');
+      sectionOrder[id].forEach(function (e) {
+        if (entries.indexOf(e) !== -1) sec.insertBefore(e, anchor);
+      });
+    });
+  }
+
+  function exitQuiz() {
+    restoreFromQuiz();
+    document.body.classList.remove('quiz-mode');
+    quizBtn.textContent = '🔀 Random quiz';
+    quizNew.hidden = true;
+    quizExit.hidden = true;
+  }
+
+  quizBtn.addEventListener('click', startQuiz);
+  quizNew.addEventListener('click', startQuiz);
+  quizExit.addEventListener('click', exitQuiz);
 
   // --- Reveal / hide all ---
   var toggleAll = document.getElementById('toggle-all');
