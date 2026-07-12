@@ -179,7 +179,7 @@ English is her second language. When editing, preserve these conventions:
   body.quiz-mode #no-results,
   body.quiz-mode #add-card,
   body.quiz-mode #toggle-all { display: none; }
-  #toggle-all, #restore-cards {
+  #toggle-all, #direction-btn, #restore-cards {
     font-size: 0.85rem;
     padding: 0.35rem 0.8rem;
     margin-bottom: 1rem;
@@ -336,6 +336,10 @@ English is her second language. When editing, preserve these conventions:
   .term { font-weight: 650; }
   .entry p { display: none; margin: 0.25rem 0 0; font-size: 0.93rem; }
   .entry.flipped p { display: block; }
+  /* reversed cards: meaning on the front, term revealed on flip */
+  .entry.rev .term { display: none; }
+  .entry.rev p { display: block; }
+  .entry.rev.flipped .term { display: inline; }
   .ex { color: var(--muted); font-style: italic; }
   .top {
     display: block;
@@ -367,6 +371,7 @@ English is her second language. When editing, preserve these conventions:
   <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
 </div>
 <button id="toggle-all" type="button">Reveal all</button>
+<button id="direction-btn" type="button">Front: term</button>
 <div id="quiz-bar">
   <button id="quiz-btn" type="button">🔀 Random quiz</button>
   <input id="quiz-count" type="number" value="20" min="1" max="500" aria-label="Number of cards">
@@ -1558,6 +1563,33 @@ English is her second language. When editing, preserve these conventions:
     }
   });
 
+  // --- Card direction: term first / meaning first / mixed ---
+  var LS_DIRECTION = 'glossaryDirection';
+  var direction = (function () {
+    var v = null;
+    try { v = localStorage.getItem(LS_DIRECTION); } catch (e) {}
+    return v === 'meaning' || v === 'mixed' ? v : 'term';
+  })();
+
+  function applyDirection() {
+    entries.forEach(function (e) {
+      var rev = direction === 'meaning' || (direction === 'mixed' && Math.random() < 0.5);
+      e.classList.toggle('rev', rev);
+      if (!allRevealed) e.classList.remove('flipped'); // avoid confusing half-flipped states
+    });
+    var btn = document.getElementById('direction-btn');
+    btn.textContent = direction === 'term' ? 'Front: term'
+      : direction === 'meaning' ? 'Front: meaning'
+      : 'Front: mixed';
+  }
+
+  document.getElementById('direction-btn').addEventListener('click', function () {
+    direction = direction === 'term' ? 'meaning' : direction === 'meaning' ? 'mixed' : 'term';
+    try { localStorage.setItem(LS_DIRECTION, direction); } catch (e) {}
+    applyDirection();
+  });
+  applyDirection();
+
   // --- Random quiz mode ---
   var quizSec = document.getElementById('quiz');
   var quizBtn = document.getElementById('quiz-btn');
@@ -1610,6 +1642,8 @@ English is her second language. When editing, preserve these conventions:
     }
     pick.forEach(function (e) {
       e.classList.remove('flipped');
+      // per-round direction: fixed for term/meaning, coin flip per card for mixed
+      e.classList.toggle('rev', direction === 'meaning' || (direction === 'mixed' && Math.random() < 0.5));
       quizSec.appendChild(e);
     });
     quizTotal = pick.length;
@@ -1635,6 +1669,7 @@ English is her second language. When editing, preserve these conventions:
   function exitQuiz() {
     restoreFromQuiz();
     filter(); // re-hide archived cards after they return to their sections
+    applyDirection(); // reset card sides to the browse-mode setting
     document.body.classList.remove('quiz-mode');
     quizBtn.textContent = '🔀 Random quiz';
     quizNew.hidden = true;
