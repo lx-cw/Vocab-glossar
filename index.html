@@ -222,6 +222,7 @@ English is her second language. When editing, preserve these conventions:
     color: #fff;
     cursor: pointer;
   }
+  .entry.archived { opacity: 0.65; }
   .custom-badge {
     font-size: 0.7rem;
     color: #2f7d5d;
@@ -397,6 +398,7 @@ English is her second language. When editing, preserve these conventions:
   <button type="button" data-lv="0">New ○○</button>
   <button type="button" data-lv="1">Know it ●○</button>
   <button type="button" data-lv="2">Mastered ●●</button>
+  <button type="button" data-lv="3">Learnt ●●●</button>
 </div>
 <p id="no-results">No matching terms — try a shorter or different word.</p>
 <nav>
@@ -1328,7 +1330,7 @@ English is her second language. When editing, preserve these conventions:
 
 <footer>
 <p>All terms are standard first-year business and university vocabulary — none are obscure or invented. One usage note rather than a definition issue: word choices like "unit" vs "module" and "O-Week" vs "freshers' week" vary between universities, so expect small differences between Hult (US-influenced) and Sydney (Australian) usage.</p>
-<button id="restore-cards" type="button">Restore removed cards</button>
+<button id="restore-cards" type="button">Bring back all learnt cards (●●● → ●●)</button>
 <details id="backup">
   <summary>Backup &amp; transfer my progress</summary>
   <p>Your own cards and removed cards are stored in this browser, not in the file itself. To back them up or move them to another device (or give them to Claude to build into the file), copy the text below. To restore, paste it and press Import.</p>
@@ -1368,7 +1370,15 @@ English is her second language. When editing, preserve these conventions:
 
   var deletedIds = lsGet(LS_DELETED);
   var customCards = lsGet(LS_CUSTOM);
-  var levels = lsGetObj(LS_LEVELS); // card id -> 1 or 2 ("I know this" level)
+  var levels = lsGetObj(LS_LEVELS); // card id -> 1, 2 ("I know this") or 3 (learnt/archived)
+
+  // Migrate old-style removed cards to level 3 (archived, still viewable)
+  if (deletedIds.length) {
+    deletedIds.forEach(function (id) { if (!levels[id] || levels[id] < 3) levels[id] = 3; });
+    lsSet(LS_LEVELS, levels);
+    deletedIds = [];
+    lsSet(LS_DELETED, []);
+  }
 
   // --- Card setup (flip, delete button, keyboard) ---
   function initEntry(e) {
@@ -1420,62 +1430,54 @@ English is her second language. When editing, preserve these conventions:
     var lv = levels[e.dataset.id] || 0;
     var btn = e.querySelector('.lvl');
     if (btn) {
-      btn.textContent = lv === 0 ? 'know it ○○' : lv === 1 ? 'know it well ●○' : 'mastered ●● — remove';
+      btn.textContent = lv === 0 ? 'know it ○○'
+        : lv === 1 ? 'know it well ●○'
+        : lv === 2 ? 'mastered ●● — archive'
+        : 'learnt ●●● — bring back';
     }
     var badge = e.querySelector('.lvl-badge');
     if (badge) badge.textContent = lv > 0 ? ' ' + '●'.repeat(lv) : '';
+    e.classList.toggle('archived', lv === 3);
   }
 
   function levelUp(e) {
     var lv = levels[e.dataset.id] || 0;
-    if (lv >= 2) {
-      if (!confirm('You have marked this card as known twice already. Remove it for good? (You can bring it back with "Restore removed cards".)')) return;
-      doDelete(e);
-      return;
+    var inQuiz = document.body.classList.contains('quiz-mode') && e.closest('section') && e.closest('section').id === 'quiz';
+    if (lv >= 3) {
+      levels[e.dataset.id] = 2; // bring an archived card back as "mastered"
+    } else {
+      levels[e.dataset.id] = lv + 1;
     }
-    levels[e.dataset.id] = lv + 1;
     lsSet(LS_LEVELS, levels);
     applyLevel(e);
     // in a quiz, "know it" also checks the card off the current round
-    if (document.body.classList.contains('quiz-mode') && e.closest('section') && e.closest('section').id === 'quiz') {
+    if (inQuiz) {
       quizGotIt(e);
-    }
-    updateProgress();
-  }
-
-  function doDelete(e) {
-    delete levels[e.dataset.id];
-    lsSet(LS_LEVELS, levels);
-    if (e.dataset.custom) {
-      customCards = customCards.filter(function (c) { return String(c.id) !== e.dataset.id; });
-      lsSet(LS_CUSTOM, customCards);
     } else {
-      if (deletedIds.indexOf(e.dataset.id) === -1) deletedIds.push(e.dataset.id);
-      lsSet(LS_DELETED, deletedIds);
+      filter(); // newly archived cards disappear unless their filter/search shows them
     }
-    entries = entries.filter(function (x) { return x !== e; });
-    var wasInQuiz = e.closest('section') && e.closest('section').id === 'quiz';
-    e.remove();
-    if (wasInQuiz) { quizDone++; updateQuizProgress(); }
     updateProgress();
   }
 
-  // --- Learning progress (learnt = built-in cards removed as learnt) ---
+  // --- Learning progress (learnt = cards archived at level 3) ---
   function updateProgress() {
-    var learnt = lsGet(LS_DELETED).length;
-    var total = entries.length + learnt;
+    var learnt = 0, almost = 0;
+    entries.forEach(function (e) {
+      var lv = levels[e.dataset.id] || 0;
+      if (lv === 3) learnt++;
+      else if (lv > 0) almost++;
+    });
+    var total = entries.length;
     var pct = total ? Math.round(learnt / total * 100) : 0;
-    var almost = entries.filter(function (e) { return (levels[e.dataset.id] || 0) > 0; }).length;
     document.getElementById('progress-label').textContent =
       learnt + ' of ' + total + ' cards learnt (' + pct + '%)' + (almost ? ' · ' + almost + ' almost there' : '');
     document.getElementById('progress-fill').style.width = pct + '%';
   }
 
-  // Initialise built-in cards, removing any the user marked as learnt
+  // Initialise built-in cards (archived ones stay in the file, just hidden by the filter)
   Array.prototype.slice.call(document.querySelectorAll('.entry')).forEach(function (e) {
     var termEl = e.querySelector('.term');
     e.dataset.id = slug(termEl ? termEl.textContent : e.textContent);
-    if (deletedIds.indexOf(e.dataset.id) !== -1) { e.remove(); return; }
     initEntry(e);
   });
 
@@ -1528,7 +1530,10 @@ English is her second language. When editing, preserve these conventions:
   });
 
   document.getElementById('restore-cards').addEventListener('click', function () {
-    lsSet(LS_DELETED, []);
+    entries.forEach(function (e) {
+      if ((levels[e.dataset.id] || 0) === 3) levels[e.dataset.id] = 2;
+    });
+    lsSet(LS_LEVELS, levels);
     location.reload();
   });
 
@@ -1589,7 +1594,7 @@ English is her second language. When editing, preserve these conventions:
       var lv = levels[e.dataset.id] || 0;
       return lv === 2 ? 0.08 : lv === 1 ? 0.33 : 1;
     }
-    var pool = entries.slice();
+    var pool = entries.filter(function (e) { return (levels[e.dataset.id] || 0) < 3; }); // no archived cards
     var pick = [];
     var count = Math.min(n, pool.length);
     while (pick.length < count && pool.length) {
@@ -1629,6 +1634,7 @@ English is her second language. When editing, preserve these conventions:
 
   function exitQuiz() {
     restoreFromQuiz();
+    filter(); // re-hide archived cards after they return to their sections
     document.body.classList.remove('quiz-mode');
     quizBtn.textContent = '🔀 Random quiz';
     quizNew.hidden = true;
@@ -1692,8 +1698,11 @@ English is her second language. When editing, preserve these conventions:
       entry.innerHTML = entry.dataset.orig; // reset highlights
       entry.classList.toggle('flipped', wasFlipped); // keep flip state as the user left it
       applyLevel(entry); // re-render level button and dots
-      var lvMatch = levelFilter === 'all' || (levels[entry.dataset.id] || 0) === levelFilter;
-      var match = lvMatch && (!q || termText(entry).indexOf(q) !== -1);
+      var lv = levels[entry.dataset.id] || 0;
+      var searchMatch = !q || termText(entry).indexOf(q) !== -1;
+      // archived (●●●) cards only show via their own filter chip or an active search
+      var lvMatch = levelFilter === 'all' ? (lv < 3 || !!q) : lv === levelFilter;
+      var match = lvMatch && searchMatch;
       entry.classList.toggle('hidden', !match);
       if (match && q) highlightTerm(entry, q);
       if (match) anyVisible = true;
@@ -1724,6 +1733,7 @@ English is her second language. When editing, preserve these conventions:
       filter();
     });
   });
+  filter(); // initial pass: hide archived cards
 })();
 </script>
 </body>
