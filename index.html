@@ -109,6 +109,26 @@ English is her second language. When editing, preserve these conventions:
     cursor: pointer;
   }
   body.quiz-mode .entry .gotit { display: inline-block; }
+  #quiz-done {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 3px solid #4a5fa5;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+  }
+  #quiz-done p { margin: 0 0 0.7rem; font-weight: 600; }
+  #quiz-done button {
+    font-size: 0.9rem;
+    padding: 0.45rem 1rem;
+    margin: 0 0.25rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  #quiz-done-new { background: #4a5fa5 !important; color: #fff !important; border-color: #4a5fa5 !important; }
   #quiz-bar {
     display: flex;
     align-items: center;
@@ -364,6 +384,11 @@ English is her second language. When editing, preserve these conventions:
 <div class="progress-wrap" id="quiz-progress">
   <span class="progress-label" id="quiz-progress-label"></span>
   <div class="progress-track"><div class="progress-fill" id="quiz-progress-fill"></div></div>
+</div>
+<div id="quiz-done" hidden>
+  <p>🎉 Round complete — well done!</p>
+  <button id="quiz-done-new" type="button">🔀 New round</button>
+  <button id="quiz-done-exit" type="button">Back to glossary</button>
 </div>
 </section>
 
@@ -1464,10 +1489,9 @@ English is her second language. When editing, preserve these conventions:
 
   function updateQuizProgress() {
     var pct = quizTotal ? Math.round(quizDone / quizTotal * 100) : 0;
-    var label = quizDone + ' / ' + quizTotal + ' done';
-    if (quizTotal && quizDone === quizTotal) label += ' — round complete! 🎉';
-    document.getElementById('quiz-progress-label').textContent = label;
+    document.getElementById('quiz-progress-label').textContent = quizDone + ' / ' + quizTotal + ' done';
     document.getElementById('quiz-progress-fill').style.width = pct + '%';
+    document.getElementById('quiz-done').hidden = !(quizTotal && quizDone >= quizTotal);
   }
 
   function quizGotIt(e) {
@@ -1528,6 +1552,8 @@ English is her second language. When editing, preserve these conventions:
   quizBtn.addEventListener('click', startQuiz);
   quizNew.addEventListener('click', startQuiz);
   quizExit.addEventListener('click', exitQuiz);
+  document.getElementById('quiz-done-new').addEventListener('click', startQuiz);
+  document.getElementById('quiz-done-exit').addEventListener('click', exitQuiz);
 
   // --- Reveal / hide all ---
   var toggleAll = document.getElementById('toggle-all');
