@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<!--
+NOTE FOR AI ASSISTANTS (Claude etc.) editing this file:
+
+This is a self-contained English vocabulary flashcard app for Lea, a German
+student starting an international business bachelor (Hult BBA / USyd BCom).
+English is her second language. When editing, preserve these conventions:
+
+- Each card is a <div class="entry"> containing:
+    <span class="term">Term</span>  — the English term (front of the card)
+    <p>…</p>                        — 1-2 sentence plain-English explanation, no jargon
+    <p class="ex">…</p>             — one natural example sentence
+- Cards live in sections #econ, #finance, #stats, #biz, #tech, #uni.
+  Insert new cards before the section's <a class="top"> link.
+- British spelling throughout. Where helpful, bridge to German school
+  knowledge (e.g. "the German Grundgesamtheit").
+- Keep explanations short and human — this is a skimmable reference, not
+  a textbook. No obscure or invented terms.
+- The <script> at the bottom auto-wires new cards (flip, search, delete);
+  do not add per-card JS or ids.
+- User progress (own cards, removed cards) lives in browser localStorage,
+  NOT in this file. If the user provides an export from the "Backup &
+  transfer" section, convert its "custom" cards into normal entry divs in
+  the chosen sections. Do not remove the backup/import UI.
+- Keep everything in this single file; users open it directly in a phone
+  browser, offline. Tell the user to save the edited file under the SAME
+  filename and location, otherwise their browser progress is orphaned.
+-->
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business English Glossary</title>
+<style>
+  :root {
+    --ink: #1e2330;
+    --muted: #5a6172;
+    --bg: #faf9f6;
+    --card: #ffffff;
+    --line: #e8e5de;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    margin: 0;
+    padding: 1rem;
+    line-height: 1.5;
+    max-width: 640px;
+    margin-inline: auto;
+  }
+  header { padding: 1rem 0 0.5rem; }
+  h1 { font-size: 1.5rem; margin: 0 0 0.4rem; }
+  .howto {
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin: 0 0 1rem;
+  }
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1.5rem;
+  }
+  nav a {
+    text-decoration: none;
+    font-size: 0.85rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--line);
+  }
+  #toggle-all, #restore-cards {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.8rem;
+    margin-bottom: 1rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  #add-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+  }
+  #add-card summary { cursor: pointer; font-weight: 600; }
+  #add-card input, #add-card textarea, #add-card select {
+    display: block;
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    font-family: inherit;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--ink);
+    box-sizing: border-box;
+  }
+  #add-card textarea { min-height: 3.2rem; resize: vertical; }
+  #save-card {
+    margin-top: 0.6rem;
+    padding: 0.45rem 1rem;
+    font-size: 0.9rem;
+    border: none;
+    border-radius: 6px;
+    background: #2f7d5d;
+    color: #fff;
+    cursor: pointer;
+  }
+  .del {
+    display: none;
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .entry.flipped .del { display: inline-block; }
+  .custom-badge {
+    font-size: 0.7rem;
+    color: #2f7d5d;
+    margin-left: 0.4rem;
+    font-weight: 400;
+  }
+  #backup { margin-top: 0.5rem; }
+  #backup summary { cursor: pointer; }
+  #backup textarea {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0.5rem 0;
+    font-family: monospace;
+    font-size: 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0.5rem;
+  }
+  #backup button {
+    font-size: 0.85rem;
+    padding: 0.3rem 0.8rem;
+    margin-right: 0.4rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .searchbox { position: relative; margin-bottom: 1rem; }
+  #search {
+    width: 100%;
+    font-size: 1rem;
+    padding: 0.6rem 2.2rem 0.6rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--ink);
+  }
+  #search:focus { outline: 2px solid #4a5fa5; border-color: transparent; }
+  #clear-search {
+    position: absolute;
+    right: 0.3rem;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: none;
+    font-size: 1.1rem;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 0.3rem 0.5rem;
+    display: none;
+  }
+  #no-results {
+    display: none;
+    color: var(--muted);
+    font-size: 0.95rem;
+    padding: 1rem 0;
+  }
+  .hidden { display: none !important; }
+  mark { background: #ffe9a8; border-radius: 2px; padding: 0 1px; }
+  section { margin-bottom: 2.2rem; }
+  h2 {
+    font-size: 1.15rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--accent, #888);
+    margin: 0 0 0.9rem;
+  }
+  .entry {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent, #888);
+    border-radius: 8px;
+    padding: 0.7rem 0.9rem;
+    margin-bottom: 0.6rem;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+  }
+  .entry::after {
+    content: "tap to flip";
+    position: absolute;
+    right: 0.8rem;
+    top: 0.8rem;
+    font-size: 0.7rem;
+    color: var(--muted);
+    opacity: 0.7;
+  }
+  .entry.flipped::after { content: "↩"; }
+  .entry.flipped { background: #fdfcf7; }
+  .term { font-weight: 650; }
+  .entry p { display: none; margin: 0.25rem 0 0; font-size: 0.93rem; }
+  .entry.flipped p { display: block; }
+  .ex { color: var(--muted); font-style: italic; }
+  .top {
+    display: block;
+    text-align: center;
+    font-size: 0.85rem;
+    margin-top: 0.8rem;
+    color: var(--muted);
+  }
+  #econ    { --accent: #2f7d5d; }
+  #finance { --accent: #b0672a; }
+  #stats   { --accent: #4a5fa5; }
+  #biz     { --accent: #8a4a7d; }
+  #uni     { --accent: #b03a48; }
+  #tech    { --accent: #2a7f8a; }
+  footer {
+    font-size: 0.85rem;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
+    padding: 1rem 0 2rem;
+  }
+</style>
+</head>
+<body id="page-top">
+<header>
+<h1>Business English Glossary</h1>
+<p class="howto"><strong>How to use:</strong> each card shows only the English term — tap it to flip and reveal the meaning. Browse one section at a time; no need to memorise anything.</p>
+<button id="toggle-all" type="button">Reveal all</button>
+<details id="add-card">
+  <summary>+ Add your own card</summary>
+  <input id="new-term" placeholder="English term" autocomplete="off">
+  <textarea id="new-def" placeholder="Short explanation in your own words"></textarea>
+  <input id="new-ex" placeholder="Example sentence (optional)" autocomplete="off">
+  <select id="new-sec">
+    <option value="econ">Economics</option>
+    <option value="finance">Accounting &amp; finance</option>
+    <option value="stats">Statistics &amp; data</option>
+    <option value="biz">Business &amp; management</option>
+    <option value="tech">AI &amp; tech</option>
+    <option value="uni">University life</option>
+  </select>
+  <button id="save-card" type="button">Add card</button>
+</details>
+<div class="searchbox">
+  <input type="search" id="search" placeholder="Search terms… (e.g. inflation, tutorial)" autocomplete="off">
+  <button id="clear-search" aria-label="Clear search">✕</button>
+</div>
+<p id="no-results">No matching terms — try a shorter or different word.</p>
+<nav>
+  <a href="#econ">Economics</a>
+  <a href="#finance">Accounting &amp; finance</a>
+  <a href="#stats">Statistics &amp; data</a>
+  <a href="#biz">Business &amp; management</a>
+  <a href="#tech">AI &amp; tech</a>
+  <a href="#uni">University life</a>
+</nav>
+</header>
+
+<section id="econ">
+<h2>Economics</h2>
+
+<div class="entry"><span class="term">Supply and demand</span>
+<p>The two forces that set prices: how much of something is available (supply) and how much people want it (demand).</p>
+<p class="ex">When demand for flights rises in summer, ticket prices go up.</p></div>
+
+<div class="entry"><span class="term">Market</span>
+<p>Any place or system where buyers and sellers trade something — goods, services, shares or even jobs.</p>
+<p class="ex">The smartphone market is dominated by a handful of large companies.</p></div>
+
+<div class="entry"><span class="term">Inflation</span>
+<p>A general rise in prices over time, which means your money buys less than before.</p>
+<p class="ex">With inflation at 4%, groceries cost noticeably more than last year.</p></div>
+
+<div class="entry"><span class="term">GDP (gross domestic product)</span>
+<p>The total value of everything a country produces in a year — the standard measure of the size of an economy.</p>
+<p class="ex">Germany's GDP grew by 1.2% last year.</p></div>
+
+<div class="entry"><span class="term">Recession</span>
+<p>A period when the economy shrinks instead of growing, usually with rising unemployment.</p>
+<p class="ex">Many businesses cut spending during the recession.</p></div>
+
+<div class="entry"><span class="term">Interest rate</span>
+<p>The price of borrowing money, shown as a percentage. Higher rates make loans more expensive and saving more attractive.</p>
+<p class="ex">The central bank raised interest rates to slow inflation.</p></div>
+
+<div class="entry"><span class="term">Central bank</span>
+<p>The national institution that manages a country's money supply and sets interest rates, like the European Central Bank.</p>
+<p class="ex">The central bank cut rates to encourage borrowing.</p></div>
+
+<div class="entry"><span class="term">Monetary policy</span>
+<p>What a central bank does to influence the economy, mainly by changing interest rates.</p>
+<p class="ex">Tight monetary policy helped bring inflation down.</p></div>
+
+<div class="entry"><span class="term">Fiscal policy</span>
+<p>What a government does with taxes and public spending to influence the economy.</p>
+<p class="ex">The government used fiscal policy — tax cuts and new spending — to boost growth.</p></div>
+
+<div class="entry"><span class="term">Opportunity cost</span>
+<p>What you give up when you choose one option over another — the value of the next-best alternative.</p>
+<p class="ex">The opportunity cost of studying full-time is the salary you could have earned working.</p></div>
+
+<div class="entry"><span class="term">Scarcity</span>
+<p>The basic problem that resources are limited but wants are not — the starting point of economics.</p>
+<p class="ex">Because of scarcity, every society must decide how to allocate its resources.</p></div>
+
+<div class="entry"><span class="term">Incentive</span>
+<p>Anything that motivates people to act in a certain way, such as a reward or a penalty.</p>
+<p class="ex">Lower taxes on electric cars are an incentive to buy them.</p></div>
+
+<div class="entry"><span class="term">Unemployment rate</span>
+<p>The percentage of people who want a job but cannot find one.</p>
+<p class="ex">The unemployment rate fell to 5% as the economy recovered.</p></div>
+
+<div class="entry"><span class="term">Exchange rate</span>
+<p>The price of one currency in terms of another.</p>
+<p class="ex">A strong euro exchange rate makes holidays in Australia cheaper for Germans.</p></div>
+
+<div class="entry"><span class="term">Tariff</span>
+<p>A tax a country charges on imported goods, usually to protect local producers.</p>
+<p class="ex">The new tariff on imported steel raised prices for car makers.</p></div>
+
+<div class="entry"><span class="term">Import / export</span>
+<p>To import is to buy goods or services from another country; to export is to sell them abroad. Also used as nouns.</p>
+<p class="ex">Germany exports cars worldwide and imports most of its energy.</p></div>
+
+<div class="entry"><span class="term">Trade surplus / trade deficit</span>
+<p>A surplus means a country exports more than it imports; a deficit means the opposite.</p>
+<p class="ex">Germany has run a trade surplus for decades.</p></div>
+
+<div class="entry"><span class="term">Free trade</span>
+<p>Trade between countries without barriers like tariffs or quotas. A free trade agreement (FTA) is a treaty that removes such barriers.</p>
+<p class="ex">The free trade agreement removed tariffs on most goods between the two countries.</p></div>
+
+<div class="entry"><span class="term">Protectionism</span>
+<p>Government policies that shield domestic industries from foreign competition, for example through tariffs or quotas — the opposite of free trade.</p>
+<p class="ex">Rising protectionism has made global trade more expensive.</p></div>
+
+<div class="entry"><span class="term">Quota</span>
+<p>A government limit on how much of a product may be imported.</p>
+<p class="ex">The quota allows only 50,000 tonnes of sugar imports per year.</p></div>
+
+<div class="entry"><span class="term">Subsidy</span>
+<p>Money a government pays to support an industry or lower the price of a product.</p>
+<p class="ex">Farmers receive subsidies to keep food prices stable.</p></div>
+
+<div class="entry"><span class="term">Sanctions</span>
+<p>Penalties, usually trade or financial restrictions, that countries impose on another country for political reasons.</p>
+<p class="ex">The sanctions cut the country off from international banking.</p></div>
+
+<div class="entry"><span class="term">Comparative advantage</span>
+<p>The idea that countries gain by specialising in what they produce relatively best and trading for the rest — the core argument for international trade.</p>
+<p class="ex">Comparative advantage explains why Switzerland focuses on pharmaceuticals rather than growing bananas.</p></div>
+
+<div class="entry"><span class="term">Multinational corporation (MNC)</span>
+<p>A company that operates in many countries at once, like Unilever or Toyota.</p>
+<p class="ex">Multinational corporations often adapt their products to local markets.</p></div>
+
+<div class="entry"><span class="term">Foreign direct investment (FDI)</span>
+<p>When a company invests directly in business operations in another country, such as building a factory abroad.</p>
+<p class="ex">The region attracted billions in foreign direct investment from tech firms.</p></div>
+
+<div class="entry"><span class="term">Emerging market</span>
+<p>A country whose economy is growing quickly and becoming more industrialised, such as India, Brazil or Vietnam.</p>
+<p class="ex">Many companies see emerging markets as their biggest growth opportunity.</p></div>
+
+<div class="entry"><span class="term">Outsourcing / offshoring</span>
+<p>Outsourcing means paying another company to do a task for you; offshoring means moving work to another country. They often overlap.</p>
+<p class="ex">The airline outsourced its call centre, offshoring the work to the Philippines.</p></div>
+
+<div class="entry"><span class="term">Appreciation / depreciation (of a currency)</span>
+<p>A currency appreciates when it becomes worth more against other currencies, and depreciates when it becomes worth less.</p>
+<p class="ex">When the euro appreciates, German exports become more expensive for American buyers.</p></div>
+
+<div class="entry"><span class="term">Business cycle</span>
+<p>The natural rise and fall of economic activity over time — expansion (boom), then slowdown, recession and recovery.</p>
+<p class="ex">Economists debate where we are in the current business cycle.</p></div>
+
+<div class="entry"><span class="term">GDP per capita</span>
+<p>A country's GDP divided by its population — a rough measure of average income and living standards, better for comparing countries than total GDP.</p>
+<p class="ex">Luxembourg has a small economy but one of the highest GDPs per capita in the world.</p></div>
+
+<div class="entry"><span class="term">Purchasing power</span>
+<p>How much your money can actually buy. Inflation reduces purchasing power even if your salary stays the same.</p>
+<p class="ex">Wages rose 3%, but with 5% inflation, purchasing power actually fell.</p></div>
+
+<div class="entry"><span class="term">WTO, IMF and World Bank</span>
+<p>The three big international economic institutions: the WTO sets rules for global trade, the IMF helps countries in financial crisis, and the World Bank funds development projects.</p>
+<p class="ex">The country turned to the IMF for an emergency loan during the crisis.</p></div>
+
+<div class="entry"><span class="term">Globalisation</span>
+<p>The growing connection of economies worldwide through trade, investment and technology.</p>
+<p class="ex">Globalisation lets a start-up in Berlin sell to customers in Sydney overnight.</p></div>
+
+<div class="entry"><span class="term">Competition</span>
+<p>Rivalry between businesses for customers, which tends to push prices down and quality up.</p>
+<p class="ex">Fierce competition among airlines keeps fares low.</p></div>
+
+<div class="entry"><span class="term">Monopoly</span>
+<p>A market with only one seller, giving that company strong power over prices.</p>
+<p class="ex">The railway operator held a monopoly on the route for years.</p></div>
+
+<div class="entry"><span class="term">Economies of scale</span>
+<p>Cost savings that come from producing in larger quantities — the more you make, the cheaper each unit becomes.</p>
+<p class="ex">Thanks to economies of scale, the factory cut its cost per unit by a third.</p></div>
+
+<div class="entry"><span class="term">Elasticity</span>
+<p>How strongly demand or supply reacts when the price changes. If a small price rise makes many people stop buying, demand is "elastic".</p>
+<p class="ex">Demand for luxury goods is elastic — people simply stop buying when prices rise.</p></div>
+
+<div class="entry"><span class="term">Consumer</span>
+<p>A person who buys and uses goods or services — often the focus of business decisions.</p>
+<p class="ex">Consumers are increasingly choosing sustainable products.</p></div>
+
+<a class="top" href="#page-top">↑ back to top</a>
+</section>
+
+<section id="finance">
+<h2>Accounting &amp; finance</h2>
+
+<div class="entry"><span class="term">Revenue</span>
+<p>All the money a business earns from selling its products or services, before any costs are subtracted. Also called "turnover" or "sales".</p>
+<p class="ex">The company's revenue reached €2 million in its second year.</p></div>
+
+<div class="entry"><span class="term">Costs / expenses</span>
+<p>The money a business spends to operate — wages, rent, materials and so on.</p>
+<p class="ex">Rising energy costs squeezed the restaurant's profits.</p></div>
+
+<div class="entry"><span class="term">Profit</span>
+<p>What is left of revenue after all costs are paid. A loss is the opposite.</p>
+<p class="ex">The shop made a profit of €50,000 last year.</p></div>
+
+<div class="entry"><span class="term">Profit margin</span>
+<p>Profit as a percentage of revenue — it shows how much of each euro of sales the business actually keeps.</p>
+<p class="ex">Supermarkets survive on thin profit margins of just a few per cent.</p></div>
+
+<div class="entry"><span class="term">Gross / net</span>
+<p>Gross means before deductions, net means after. Gross profit is revenue minus production costs; net profit is what remains after all costs and tax. Same logic as German brutto/netto.</p>
+<p class="ex">Her gross salary is €4,000, but the net amount after tax is much lower.</p></div>
+
+<div class="entry"><span class="term">Fixed costs / variable costs</span>
+<p>Fixed costs stay the same regardless of how much you produce (like rent); variable costs rise with production (like materials).</p>
+<p class="ex">The café's rent is a fixed cost, while coffee beans are a variable cost.</p></div>
+
+<div class="entry"><span class="term">Overheads</span>
+<p>The ongoing running costs of a business that aren't tied to a specific product — rent, electricity, administration.</p>
+<p class="ex">Working from home helped the agency cut its overheads.</p></div>
+
+<div class="entry"><span class="term">Asset</span>
+<p>Anything valuable a business owns, such as cash, buildings, machines or brands.</p>
+<p class="ex">The company's biggest asset is its city-centre office building.</p></div>
+
+<div class="entry"><span class="term">Liability</span>
+<p>Anything a business owes to others, such as loans or unpaid bills.</p>
+<p class="ex">The firm reduced its liabilities by paying off its bank loan early.</p></div>
+
+<div class="entry"><span class="term">Equity</span>
+<p>The owners' share of a business — what would be left if all assets were sold and all debts paid. Also used for shares in a company.</p>
+<p class="ex">The founders kept 60% of the equity after the investment round.</p></div>
+
+<div class="entry"><span class="term">Balance sheet</span>
+<p>A financial statement showing what a company owns (assets) and owes (liabilities) at one moment in time.</p>
+<p class="ex">Investors checked the balance sheet before buying shares.</p></div>
+
+<div class="entry"><span class="term">Income statement (profit and loss statement)</span>
+<p>A report showing a company's revenue, costs and profit over a period, usually a year. Often shortened to "P&amp;L".</p>
+<p class="ex">The income statement showed a small loss in the first quarter.</p></div>
+
+<div class="entry"><span class="term">Cash flow</span>
+<p>The money actually moving in and out of a business. A company can be profitable on paper but still fail if cash runs out.</p>
+<p class="ex">Late-paying customers caused a serious cash flow problem.</p></div>
+
+<div class="entry"><span class="term">Budget</span>
+<p>A plan for how much money will be earned and spent over a period.</p>
+<p class="ex">The marketing team went over budget in December.</p></div>
+
+<div class="entry"><span class="term">Investment</span>
+<p>Putting money into something — a business, shares, property — hoping it will grow in value or produce income.</p>
+<p class="ex">Her investment in the start-up tripled in value.</p></div>
+
+<div class="entry"><span class="term">Share (stock)</span>
+<p>A small ownership piece of a company. Buying shares makes you a part-owner. "Share" is the usual British term; "stock" is more American.</p>
+<p class="ex">He bought shares in the company when it listed on the stock exchange.</p></div>
+
+<div class="entry"><span class="term">Shareholder</span>
+<p>A person or institution that owns shares in a company.</p>
+<p class="ex">Shareholders voted to approve the merger at the annual meeting.</p></div>
+
+<div class="entry"><span class="term">Dividend</span>
+<p>A portion of profit that a company pays out to its shareholders.</p>
+<p class="ex">The bank paid a dividend of €1.20 per share.</p></div>
+
+<div class="entry"><span class="term">Debt</span>
+<p>Money that is borrowed and must be paid back, usually with interest.</p>
+<p class="ex">The company took on debt to build its new factory.</p></div>
+
+<div class="entry"><span class="term">Interest</span>
+<p>The extra money paid for borrowing, or earned for lending or saving.</p>
+<p class="ex">The loan charges 6% interest per year.</p></div>
+
+<div class="entry"><span class="term">Return on investment (ROI)</span>
+<p>How much profit an investment produces compared with what it cost, usually as a percentage.</p>
+<p class="ex">The advertising campaign delivered an ROI of 150%.</p></div>
+
+<div class="entry"><span class="term">Break-even point</span>
+<p>The point at which revenue exactly covers costs — no profit, no loss.</p>
+<p class="ex">The café reached its break-even point after eight months.</p></div>
+
+<div class="entry"><span class="term">Depreciation</span>
+<p>The gradual loss in value of an asset over time, such as machinery wearing out — recorded as a cost in the accounts.</p>
+<p class="ex">The delivery vans lose about 20% of their value each year through depreciation.</p></div>
+
+<div class="entry"><span class="term">Bookkeeping / accounting</span>
+<p>Bookkeeping is recording every financial transaction; accounting is the broader work of organising, reporting and interpreting those numbers.</p>
+<p class="ex">She does the bookkeeping herself but hires an accountant for the year-end reports.</p></div>
+
+<div class="entry"><span class="term">Invoice</span>
+<p>A document requesting payment for goods or services delivered — the English word for Rechnung in a business context.</p>
+<p class="ex">Please send the invoice by the end of the month so we can process payment.</p></div>
+
+<div class="entry"><span class="term">Accounts receivable / accounts payable</span>
+<p>Receivables are money customers still owe you; payables are money you still owe suppliers.</p>
+<p class="ex">The firm's accounts receivable grew because customers were paying late.</p></div>
+
+<div class="entry"><span class="term">Liquidity</span>
+<p>How easily a company can pay its short-term bills — or how quickly an asset can be turned into cash.</p>
+<p class="ex">The company sold some equipment to improve its liquidity.</p></div>
+
+<div class="entry"><span class="term">Insolvency / bankruptcy</span>
+<p>Insolvency means being unable to pay your debts; bankruptcy is the formal legal process that can follow.</p>
+<p class="ex">The chain filed for bankruptcy after two years of losses.</p></div>
+
+<div class="entry"><span class="term">Capital</span>
+<p>The money and assets a business uses to operate and grow. "Raising capital" means getting funding from investors or lenders.</p>
+<p class="ex">The start-up raised capital from three investors to fund its expansion.</p></div>
+
+<div class="entry"><span class="term">Stock exchange / stock market</span>
+<p>The marketplace where shares of public companies are bought and sold, like the Frankfurt Stock Exchange or the ASX in Sydney.</p>
+<p class="ex">The company listed on the stock exchange to raise money for growth.</p></div>
+
+<div class="entry"><span class="term">Bond</span>
+<p>A loan to a government or company that you can buy as an investment — it pays regular interest and returns your money at the end. Generally safer but less profitable than shares.</p>
+<p class="ex">Government bonds are popular with cautious investors.</p></div>
+
+<div class="entry"><span class="term">Portfolio</span>
+<p>The full collection of investments a person or fund holds.</p>
+<p class="ex">Her portfolio contains shares, bonds and a little gold.</p></div>
+
+<div class="entry"><span class="term">Diversification</span>
+<p>Spreading investments across different assets so one failure doesn't ruin you — the financial version of not putting all your eggs in one basket.</p>
+<p class="ex">Diversification protected her savings when tech shares crashed.</p></div>
+
+<div class="entry"><span class="term">Risk and return</span>
+<p>The basic trade-off in finance: investments that might earn more usually carry a higher chance of loss.</p>
+<p class="ex">Start-up shares offer high potential returns but come with high risk.</p></div>
+
+<div class="entry"><span class="term">Compound interest</span>
+<p>Interest earned on both your original money and the interest already added — which makes savings (and debts) grow faster over time.</p>
+<p class="ex">Thanks to compound interest, money invested at 20 is worth far more at 60.</p></div>
+
+<div class="entry"><span class="term">IPO (initial public offering)</span>
+<p>The first time a company sells its shares to the public on a stock exchange — "going public".</p>
+<p class="ex">The tech firm's IPO valued it at over a billion euros.</p></div>
+
+<div class="entry"><span class="term">Venture capital (VC)</span>
+<p>Investment money given to young, high-risk companies in exchange for a share of ownership.</p>
+<p class="ex">The start-up secured venture capital to hire its first twenty employees.</p></div>
+
+<div class="entry"><span class="term">Tax / VAT</span>
+<p>Tax is money paid to the state. VAT (value added tax) is the tax added to most purchases — the equivalent of the German Mehrwertsteuer. Note: Australia calls it GST.</p>
+<p class="ex">Prices in the shop include 19% VAT.</p></div>
+
+<div class="entry"><span class="term">Audit</span>
+<p>An official, independent check of a company's financial records to make sure they are accurate.</p>
+<p class="ex">The annual audit found no irregularities in the accounts.</p></div>
+
+<div class="entry"><span class="term">Recurring (recurring revenue / recurring payment)</span>
+<p>Happening again and again on a regular schedule. Recurring revenue is income that repeats automatically, like subscriptions — investors love it because it's predictable.</p>
+<p class="ex">The software firm's subscriptions generate recurring revenue every month.</p></div>
+
+<div class="entry"><span class="term">Forecast</span>
+<p>An estimate of future results, such as next year's sales, based on current information.</p>
+<p class="ex">The sales forecast for next quarter looks optimistic.</p></div>
+
+<a class="top" href="#page-top">↑ back to top</a>
+</section>
+
+<section id="stats">
+<h2>Statistics &amp; data</h2>
+
+<div class="entry"><span class="term">Data</span>
+<p>Facts and figures collected for analysis. Note: in everyday English "data" is usually treated as singular ("the data shows…").</p>
+<p class="ex">The data shows that sales peak on Saturdays.</p></div>
+
+<div class="entry"><span class="term">Average (mean)</span>
+<p>The typical value of a set of numbers: add them all up and divide by how many there are.</p>
+<p class="ex">The average customer spends €35 per visit.</p></div>
+
+<div class="entry"><span class="term">Median</span>
+<p>The middle value when numbers are sorted from smallest to largest — often more honest than the average when a few extreme values distort the picture.</p>
+<p class="ex">The median salary gives a better picture than the mean, because a few very high earners pull the mean up.</p></div>
+
+<div class="entry"><span class="term">Mode</span>
+<p>The value that appears most often in a set of data — the German Modus.</p>
+<p class="ex">The mode of shoe sizes sold was 42 — the most common size by far.</p></div>
+
+<div class="entry"><span class="term">Percentage / percentage point</span>
+<p>A share out of 100. A "percentage point" is the difference between two percentages — going from 4% to 6% is a rise of two percentage points.</p>
+<p class="ex">Market share rose from 10% to 12% — an increase of two percentage points.</p></div>
+
+<div class="entry"><span class="term">Growth rate</span>
+<p>How fast something increases over time, usually as a percentage per year.</p>
+<p class="ex">The company's growth rate slowed from 15% to 8% a year.</p></div>
+
+<div class="entry"><span class="term">Population</span>
+<p>In statistics, the entire group you want to study — all customers, all students, all voters. The German Grundgesamtheit.</p>
+<p class="ex">The population for the study was all first-year students in Australia.</p></div>
+
+<div class="entry"><span class="term">Sample</span>
+<p>A smaller group selected from a larger population to study, because surveying everyone is impractical.</p>
+<p class="ex">The survey used a sample of 1,000 customers.</p></div>
+
+<div class="entry"><span class="term">Random sample</span>
+<p>A sample where every member of the population has an equal chance of being chosen — the fairest way to get results that represent the whole group.</p>
+<p class="ex">They drew a random sample instead of just surveying people outside one shop.</p></div>
+
+<div class="entry"><span class="term">Bias</span>
+<p>Anything that systematically distorts results in one direction, such as surveying only your happiest customers.</p>
+<p class="ex">The survey suffered from bias because only satisfied customers bothered to respond.</p></div>
+
+<div class="entry"><span class="term">Qualitative / quantitative data</span>
+<p>Quantitative data is numbers (sales, age, prices); qualitative data is descriptions (opinions, interview answers, categories).</p>
+<p class="ex">The study combined quantitative sales data with qualitative customer interviews.</p></div>
+
+<div class="entry"><span class="term">Survey</span>
+<p>A set of questions asked to many people to gather information about opinions or behaviour.</p>
+<p class="ex">A recent survey found that 70% of students prefer online lectures.</p></div>
+
+<div class="entry"><span class="term">Variable</span>
+<p>Anything that can take different values and be measured, such as price, age or sales.</p>
+<p class="ex">Price and demand are the two key variables in the model.</p></div>
+
+<div class="entry"><span class="term">Correlation</span>
+<p>When two things tend to move together. Important: correlation does not prove that one causes the other.</p>
+<p class="ex">There is a strong correlation between advertising spend and sales.</p></div>
+
+<div class="entry"><span class="term">Trend</span>
+<p>The general direction in which something is moving over time — upwards, downwards or flat.</p>
+<p class="ex">Online sales show a clear upward trend.</p></div>
+
+<div class="entry"><span class="term">Distribution</span>
+<p>How values are spread out across a range — for example, whether most salaries cluster in the middle or at the extremes.</p>
+<p class="ex">Exam marks followed a normal distribution, with most students near the middle.</p></div>
+
+<div class="entry"><span class="term">Standard deviation</span>
+<p>A measure of how spread out numbers are around the average. Small means values are close together; large means they vary a lot.</p>
+<p class="ex">The two funds have the same average return, but one has a much higher standard deviation — it is riskier.</p></div>
+
+<div class="entry"><span class="term">Variance</span>
+<p>Another measure of spread — the standard deviation squared. You'll meet both in formulas; they tell the same story.</p>
+<p class="ex">Higher variance in monthly sales makes planning harder.</p></div>
+
+<div class="entry"><span class="term">Quartile / percentile</span>
+<p>Ways of ranking values by position: quartiles split sorted data into four equal parts; percentiles into a hundred. Being in the 90th percentile means 90% scored below you.</p>
+<p class="ex">Her entrance exam score was in the top quartile.</p></div>
+
+<div class="entry"><span class="term">Probability</span>
+<p>The chance that something will happen, from 0 (impossible) to 1 (certain), often written as a percentage.</p>
+<p class="ex">There is a 30% probability the project will run over budget.</p></div>
+
+<div class="entry"><span class="term">Outlier</span>
+<p>A value far outside the normal range of the data, which can distort averages.</p>
+<p class="ex">One enormous order was an outlier that made the monthly figures look better than they were.</p></div>
+
+<div class="entry"><span class="term">Benchmark</span>
+<p>A standard point of comparison used to judge performance.</p>
+<p class="ex">The team compared its costs against an industry benchmark.</p></div>
+
+<div class="entry"><span class="term">Causation</span>
+<p>When one thing directly causes another. The classic warning in every statistics course: correlation alone does not prove causation.</p>
+<p class="ex">Ice cream sales and drownings are correlated, but the causation is hot weather driving both.</p></div>
+
+<div class="entry"><span class="term">Hypothesis</span>
+<p>A precise claim you test with data, such as "the new design increases sales". Statistics courses spend a lot of time on hypothesis testing.</p>
+<p class="ex">The team tested the hypothesis that free shipping increases order size.</p></div>
+
+<div class="entry"><span class="term">Statistical significance (p-value)</span>
+<p>A result is statistically significant when it's unlikely to have happened by pure chance. The p-value measures this — smaller means stronger evidence, with 0.05 the usual threshold.</p>
+<p class="ex">The increase in sales was statistically significant, with a p-value below 0.05.</p></div>
+
+<div class="entry"><span class="term">Confidence interval</span>
+<p>A range that likely contains the true value, since a sample never gives you the exact answer — usually stated with 95% confidence.</p>
+<p class="ex">Average spend was €42, with a 95% confidence interval of €39 to €45.</p></div>
+
+<div class="entry"><span class="term">Regression</span>
+<p>A method for estimating how one variable affects another, such as how much sales rise per euro of advertising. One of the most-used tools in business analysis.</p>
+<p class="ex">The regression showed that each €1,000 of advertising added roughly €4,500 in sales.</p></div>
+
+<div class="entry"><span class="term">Bar chart, pie chart, histogram, scatter plot</span>
+<p>The everyday chart vocabulary: bar charts compare categories, pie charts show shares of a whole, histograms show distributions, and scatter plots show the relationship between two variables — plotted on the x-axis (horizontal) and y-axis (vertical).</p>
+<p class="ex">She used a scatter plot to show the relationship between price and demand.</p></div>
+
+<div class="entry"><span class="term">Spreadsheet</span>
+<p>Software like Excel or Google Sheets that organises data in rows and columns — the standard tool for data work in any business degree.</p>
+<p class="ex">The assignment requires you to analyse the dataset in a spreadsheet.</p></div>
+
+<div class="entry"><span class="term">Dataset</span>
+<p>An organised collection of data, often in a table or spreadsheet, ready for analysis.</p>
+<p class="ex">We analysed a dataset of 10,000 customer transactions.</p></div>
+
+<a class="top" href="#page-top">↑ back to top</a>
+</section>
+
+<section id="biz">
+<h2>General business &amp; management</h2>
+
+<div class="entry"><span class="term">Strategy</span>
+<p>A company's long-term plan for reaching its goals — where to compete and how to win.</p>
+<p class="ex">Their strategy is to focus on premium customers rather than compete on price.</p></div>
+
+<div class="entry"><span class="term">Business model</span>
+<p>How a company makes money: what it sells, to whom, and how it earns more than it spends.</p>
+<p class="ex">Netflix changed its business model from DVD rental to streaming subscriptions.</p></div>
+
+<div class="entry"><span class="term">Value proposition / USP</span>
+<p>The value proposition is why customers should choose you; the USP (unique selling point) is the one thing that sets you apart from competitors.</p>
+<p class="ex">Free next-day delivery is the shop's USP.</p></div>
+
+<div class="entry"><span class="term">Mission and vision</span>
+<p>The mission says what a company does and why; the vision describes what it wants to become. Standard vocabulary in every strategy course.</p>
+<p class="ex">The company's mission is affordable design; its vision is to be Europe's leading furniture brand.</p></div>
+
+<div class="entry"><span class="term">Stakeholder</span>
+<p>Anyone affected by a business or with an interest in it: employees, customers, investors, suppliers, the local community.</p>
+<p class="ex">The company consulted all stakeholders before closing the plant.</p></div>
+
+<div class="entry"><span class="term">CEO, CFO, COO (the C-suite)</span>
+<p>The top executives: the CEO (chief executive officer) leads the company, the CFO (chief financial officer) manages the money, the COO (chief operating officer) runs daily operations. Together they're called the C-suite.</p>
+<p class="ex">The CEO announced the new strategy, and the CFO explained how it would be funded.</p></div>
+
+<div class="entry"><span class="term">Board of directors</span>
+<p>The group elected by shareholders to oversee company management and take major decisions. Note: the German split between Vorstand and Aufsichtsrat doesn't exist in most English-speaking countries — one board does both jobs.</p>
+<p class="ex">The board of directors approved the acquisition.</p></div>
+
+<div class="entry"><span class="term">Headquarters (HQ) / subsidiary</span>
+<p>Headquarters is a company's main office; a subsidiary is a company owned and controlled by another (parent) company.</p>
+<p class="ex">The group's headquarters are in Munich, with subsidiaries in twelve countries.</p></div>
+
+<div class="entry"><span class="term">Department / division</span>
+<p>The units a company is organised into — marketing department, finance department. A division is usually bigger, often running its own product line.</p>
+<p class="ex">She works in the marketing department of the consumer goods division.</p></div>
+
+<div class="entry"><span class="term">Operations</span>
+<p>The day-to-day work of actually producing and delivering what a company sells. "Ops" for short.</p>
+<p class="ex">Smooth operations are what keep delivery times short.</p></div>
+
+<div class="entry"><span class="term">Organisational structure / hierarchy</span>
+<p>How roles and reporting lines are arranged in a company. A "flat" hierarchy has few management layers; a "steep" one has many.</p>
+<p class="ex">The start-up's flat hierarchy means everyone reports directly to the founders.</p></div>
+
+<div class="entry"><span class="term">Corporate culture</span>
+<p>The shared values and unwritten rules of how people work together in a company.</p>
+<p class="ex">The firm's corporate culture encourages people to challenge their managers openly.</p></div>
+
+<div class="entry"><span class="term">Customer vs client</span>
+<p>Both buy from a business. "Customer" is general; "client" usually means someone receiving professional or ongoing services, like at a law firm.</p>
+<p class="ex">The consultancy meets each client monthly, while the shop serves hundreds of customers a day.</p></div>
+
+<div class="entry"><span class="term">Market share</span>
+<p>The percentage of a market's total sales that one company captures.</p>
+<p class="ex">The brand grew its market share from 8% to 12% in two years.</p></div>
+
+<div class="entry"><span class="term">Competitor</span>
+<p>Another business trying to sell to the same customers as you.</p>
+<p class="ex">Their main competitor launched a cheaper version last month.</p></div>
+
+<div class="entry"><span class="term">Brand</span>
+<p>The identity of a product or company — its name, image and the feelings people associate with it.</p>
+<p class="ex">A strong brand lets the company charge higher prices.</p></div>
+
+<div class="entry"><span class="term">Marketing</span>
+<p>Everything a business does to understand customers and persuade them to buy — research, advertising, pricing, promotion.</p>
+<p class="ex">The marketing campaign targeted students on social media.</p></div>
+
+<div class="entry"><span class="term">Sales</span>
+<p>The function of actually selling to customers — finding them, persuading them and closing deals. Related to marketing but not the same thing.</p>
+<p class="ex">Marketing brings in the leads; sales turns them into paying customers.</p></div>
+
+<div class="entry"><span class="term">Product launch</span>
+<p>The official introduction of a new product to the market.</p>
+<p class="ex">The product launch was timed for the Christmas shopping season.</p></div>
+
+<div class="entry"><span class="term">Supplier / vendor</span>
+<p>A company that provides goods or services to another business. "Vendor" is common in more formal or IT contexts.</p>
+<p class="ex">The bakery switched suppliers to get better flour at a lower price.</p></div>
+
+<div class="entry"><span class="term">Retail / wholesale</span>
+<p>Retail is selling to end consumers in small quantities; wholesale is selling in bulk to other businesses, usually cheaper per unit.</p>
+<p class="ex">The brand sells wholesale to supermarkets and retail through its own online shop.</p></div>
+
+<div class="entry"><span class="term">Supply chain</span>
+<p>The whole journey of a product from raw materials to the final customer, including all the suppliers and transport in between.</p>
+<p class="ex">The pandemic disrupted global supply chains for electronics.</p></div>
+
+<div class="entry"><span class="term">Logistics</span>
+<p>The practical work of moving and storing goods — transport, warehousing, delivery.</p>
+<p class="ex">Fast, reliable logistics is central to online retail.</p></div>
+
+<div class="entry"><span class="term">Human resources (HR)</span>
+<p>The department that handles everything about employees: hiring, pay, training and workplace issues.</p>
+<p class="ex">HR is running interviews for the graduate programme this week.</p></div>
+
+<div class="entry"><span class="term">Recruitment / onboarding</span>
+<p>Recruitment is finding and hiring new employees; onboarding is helping them settle in during their first weeks.</p>
+<p class="ex">Good onboarding helps new hires become productive within their first month.</p></div>
+
+<div class="entry"><span class="term">Entrepreneur</span>
+<p>Someone who starts and builds a business, taking on the risk in hope of reward.</p>
+<p class="ex">The entrepreneur launched her third company before turning thirty.</p></div>
+
+<div class="entry"><span class="term">Start-up</span>
+<p>A young company, often built around a new idea and aiming to grow quickly.</p>
+<p class="ex">He joined a fintech start-up straight after graduating.</p></div>
+
+<div class="entry"><span class="term">Merger and acquisition (M&amp;A)</span>
+<p>A merger is when two companies join to become one; an acquisition is when one company buys another.</p>
+<p class="ex">The merger created the largest airline in Europe.</p></div>
+
+<div class="entry"><span class="term">KPI (key performance indicator)</span>
+<p>A specific number used to measure how well a business or team is performing, such as monthly sales or customer satisfaction.</p>
+<p class="ex">Customer retention is our most important KPI this year.</p></div>
+
+<div class="entry"><span class="term">Target</span>
+<p>A specific goal a person or team is expected to reach.</p>
+<p class="ex">The sales team hit its quarterly target a week early.</p></div>
+
+<div class="entry"><span class="term">B2B / B2C</span>
+<p>B2B (business-to-business) means selling to other companies; B2C (business-to-consumer) means selling to individuals.</p>
+<p class="ex">The software firm is purely B2B — its customers are other companies.</p></div>
+
+<div class="entry"><span class="term">SWOT analysis</span>
+<p>A simple planning tool that lists a business's Strengths, Weaknesses, Opportunities and Threats.</p>
+<p class="ex">The team started the project with a SWOT analysis of the brand.</p></div>
+
+<div class="entry"><span class="term">Pitch</span>
+<p>A short, persuasive presentation of an idea or business, often to investors. Also used as a verb.</p>
+<p class="ex">She pitched her business idea to a panel of investors in five minutes.</p></div>
+
+<div class="entry"><span class="term">Negotiation</span>
+<p>A discussion aimed at reaching an agreement, where each side may give something up.</p>
+<p class="ex">After weeks of negotiation, the two firms agreed on a price.</p></div>
+
+<div class="entry"><span class="term">Agenda and minutes</span>
+<p>The agenda is the list of topics for a meeting; the minutes are the written record of what was discussed and decided.</p>
+<p class="ex">Please read the agenda before the meeting — I'll circulate the minutes afterwards.</p></div>
+
+<div class="entry"><span class="term">Feedback</span>
+<p>Comments on someone's work or on a product, meant to help improve it.</p>
+<p class="ex">Her manager gave constructive feedback on the presentation.</p></div>
+
+<div class="entry"><span class="term">Delegate</span>
+<p>To give a task or responsibility to someone else, usually someone you manage.</p>
+<p class="ex">Good managers delegate work instead of doing everything themselves.</p></div>
+
+<div class="entry"><span class="term">Innovation / disruption</span>
+<p>Innovation is creating something new and valuable; disruption is when an innovation overturns an existing market, the way streaming disrupted video rental.</p>
+<p class="ex">Digital cameras disrupted the film industry almost overnight.</p></div>
+
+<div class="entry"><span class="term">Project management (milestone, deliverable)</span>
+<p>Planning and steering a project to finish on time and on budget. A milestone is a key checkpoint; a deliverable is a concrete result you must hand over.</p>
+<p class="ex">The first milestone is the prototype; the final deliverable is the market-ready product.</p></div>
+
+<div class="entry"><span class="term">Efficiency vs effectiveness</span>
+<p>A classic management distinction: efficiency is doing things with minimal waste ("doing things right"); effectiveness is achieving the right goals ("doing the right things").</p>
+<p class="ex">The team was efficient but not effective — they built the wrong product quickly.</p></div>
+
+<div class="entry"><span class="term">Networking</span>
+<p>Building professional relationships that may lead to opportunities, advice or jobs.</p>
+<p class="ex">She met her future employer while networking at a careers fair.</p></div>
+
+<div class="entry"><span class="term">Corporate social responsibility (CSR)</span>
+<p>A company's efforts to act ethically and benefit society and the environment, beyond just making profit.</p>
+<p class="ex">The firm's CSR programme funds local schools and cuts its carbon emissions.</p></div>
+
+<a class="top" href="#page-top">↑ back to top</a>
+</section>
+
+<section id="tech">
+<h2>AI &amp; tech</h2>
+
+<div class="entry"><span class="term">API (application programming interface)</span>
+<p>A way for two software systems to talk to each other and exchange data automatically.</p>
+<p class="ex">The app uses the bank's API to show your balance in real time.</p></div>
+
+<div class="entry"><span class="term">Algorithm</span>
+<p>A set of step-by-step instructions a computer follows to solve a problem or make a decision.</p>
+<p class="ex">The recommendation algorithm decides which videos you see next.</p></div>
+
+<div class="entry"><span class="term">Artificial intelligence (AI)</span>
+<p>Software that performs tasks normally requiring human intelligence, such as understanding language or recognising images.</p>
+<p class="ex">The company uses AI to answer routine customer questions.</p></div>
+
+<div class="entry"><span class="term">Machine learning</span>
+<p>A type of AI that improves by learning patterns from data instead of following fixed rules.</p>
+<p class="ex">The fraud detection system uses machine learning to spot unusual transactions.</p></div>
+
+<div class="entry"><span class="term">Large language model (LLM)</span>
+<p>An AI system trained on huge amounts of text to understand and generate language — the technology behind tools like ChatGPT and Claude.</p>
+<p class="ex">Many firms now use LLMs to draft reports and summarise documents.</p></div>
+
+<div class="entry"><span class="term">Generative AI</span>
+<p>AI that creates new content — text, images, code, audio — rather than just analysing existing data.</p>
+<p class="ex">The agency uses generative AI to draft first versions of ad copy.</p></div>
+
+<div class="entry"><span class="term">Prompt</span>
+<p>The instruction or question you give an AI tool. Writing good prompts is becoming a workplace skill of its own.</p>
+<p class="ex">A more specific prompt gave the AI much better results.</p></div>
+
+<div class="entry"><span class="term">Chatbot</span>
+<p>A program that holds conversations with users, often for customer service on websites.</p>
+<p class="ex">The chatbot resolves most routine questions before a human gets involved.</p></div>
+
+<div class="entry"><span class="term">Model / training data</span>
+<p>In AI, the model is the system that makes predictions; training data is the collection of examples it learned from. Poor training data means poor results.</p>
+<p class="ex">The model performs badly on older customers because they were missing from the training data.</p></div>
+
+<div class="entry"><span class="term">Automation</span>
+<p>Using technology to do tasks with little or no human involvement.</p>
+<p class="ex">Automation of invoicing saved the finance team ten hours a week.</p></div>
+
+<div class="entry"><span class="term">Cloud computing (the cloud)</span>
+<p>Using computing power and storage over the internet instead of on your own machines.</p>
+<p class="ex">The start-up runs everything in the cloud, so it never bought its own servers.</p></div>
+
+<div class="entry"><span class="term">SaaS (software as a service)</span>
+<p>Software you use through the internet for a subscription fee instead of buying and installing it — think Zoom or Salesforce.</p>
+<p class="ex">Most business tools today follow a SaaS model with monthly pricing.</p></div>
+
+<div class="entry"><span class="term">Platform</span>
+<p>A digital business that connects two groups, such as buyers and sellers or drivers and riders.</p>
+<p class="ex">Airbnb is a platform — it owns no rooms but connects hosts with guests.</p></div>
+
+<div class="entry"><span class="term">E-commerce</span>
+<p>Buying and selling goods or services online.</p>
+<p class="ex">E-commerce now accounts for a fifth of all retail sales.</p></div>
+
+<div class="entry"><span class="term">Fintech</span>
+<p>Short for "financial technology" — companies using technology to offer financial services, like mobile banking or payment apps.</p>
+<p class="ex">Fintech start-ups are challenging traditional banks on fees and speed.</p></div>
+
+<div class="entry"><span class="term">Big data</span>
+<p>Extremely large sets of data that businesses analyse to find patterns and make decisions.</p>
+<p class="ex">The retailer uses big data to predict what customers will buy next season.</p></div>
+
+<div class="entry"><span class="term">Data analytics</span>
+<p>Examining data to draw useful conclusions for decision-making.</p>
+<p class="ex">Data analytics showed that most customers abandon their basket at the payment step.</p></div>
+
+<div class="entry"><span class="term">Dashboard</span>
+<p>A screen that displays a business's key numbers at a glance, usually with charts that update automatically.</p>
+<p class="ex">The sales dashboard shows revenue and targets in real time.</p></div>
+
+<div class="entry"><span class="term">Database</span>
+<p>An organised digital collection of information that can be searched and updated, such as all customer records.</p>
+<p class="ex">Every order is stored in the customer database.</p></div>
+
+<div class="entry"><span class="term">Server / hosting</span>
+<p>A server is a computer that delivers websites, apps or data to users; hosting is the service of running them for you.</p>
+<p class="ex">The website crashed because the server couldn't handle the traffic.</p></div>
+
+<div class="entry"><span class="term">Open source</span>
+<p>Software whose code is publicly available for anyone to use, inspect and improve — often free, like Linux or Firefox.</p>
+<p class="ex">The start-up built its product on open-source software to save licensing costs.</p></div>
+
+<div class="entry"><span class="term">Scalability</span>
+<p>How well a business or system can grow without costs growing just as fast. Software scales well: serving a million users costs little more than serving a thousand.</p>
+<p class="ex">Investors loved the app's scalability — growth costs almost nothing.</p></div>
+
+<div class="entry"><span class="term">SEO (search engine optimisation)</span>
+<p>Improving a website so it appears higher in Google results and attracts more visitors without paid ads.</p>
+<p class="ex">Better SEO doubled the shop's traffic within six months.</p></div>
+
+<div class="entry"><span class="term">Internet of Things (IoT)</span>
+<p>Everyday objects — machines, vehicles, sensors — connected to the internet so they can send data and be controlled remotely.</p>
+<p class="ex">IoT sensors alert the factory before a machine breaks down.</p></div>
+
+<div class="entry"><span class="term">Cybersecurity</span>
+<p>Protecting computer systems and data from attacks, theft and damage.</p>
+<p class="ex">After the data breach, the firm doubled its cybersecurity budget.</p></div>
+
+<div class="entry"><span class="term">Phishing</span>
+<p>Fraudulent messages that pretend to be from a trusted source to trick people into revealing passwords or payment details.</p>
+<p class="ex">The fake "IT department" email was a phishing attempt.</p></div>
+
+<div class="entry"><span class="term">Data privacy / GDPR</span>
+<p>Data privacy is protecting people's personal information; the GDPR is the EU law governing it — the English name for the DSGVO.</p>
+<p class="ex">Under GDPR, customers can ask a company to delete their personal data.</p></div>
+
+<div class="entry"><span class="term">Encryption</span>
+<p>Scrambling data so only authorised people can read it — the basis of secure messaging and online payments.</p>
+<p class="ex">The payment data is protected by encryption from your phone to the bank.</p></div>
+
+<div class="entry"><span class="term">Digital transformation</span>
+<p>The process of a company rebuilding how it works around digital technology — a very common phrase in business courses and job adverts.</p>
+<p class="ex">The insurer's digital transformation moved all claims handling online.</p></div>
+
+<div class="entry"><span class="term">Agile</span>
+<p>A way of working in short cycles with frequent feedback, instead of planning everything upfront. Originally from software, now used across business.</p>
+<p class="ex">The team works in an agile way, releasing improvements every two weeks.</p></div>
+
+<div class="entry"><span class="term">MVP (minimum viable product)</span>
+<p>The simplest version of a product that works, released early to test whether customers actually want it.</p>
+<p class="ex">They launched an MVP after three months and improved it based on user feedback.</p></div>
+
+<div class="entry"><span class="term">Beta</span>
+<p>An early test version of a product shared with a limited group before the official launch.</p>
+<p class="ex">The app is still in beta, so some features are missing.</p></div>
+
+<div class="entry"><span class="term">Bug</span>
+<p>An error in software that makes it behave incorrectly.</p>
+<p class="ex">A bug in the checkout page cost the shop a weekend of sales.</p></div>
+
+<div class="entry"><span class="term">UX / UI (user experience / user interface)</span>
+<p>UI is what a digital product looks like; UX is how it feels to use — how easy, fast and pleasant it is.</p>
+<p class="ex">Good UX is why some banking apps feel effortless and others feel frustrating.</p></div>
+
+<div class="entry"><span class="term">Blockchain</span>
+<p>A shared digital record of transactions that no single party controls — the technology behind cryptocurrencies like Bitcoin.</p>
+<p class="ex">Some supply chains use blockchain to track goods from factory to shelf.</p></div>
+
+<a class="top" href="#page-top">↑ back to top</a>
+</section>
+
+<section id="uni">
+<h2>University &amp; campus life</h2>
+
+<div class="entry"><span class="term">Lecture</span>
+<p>A large class where a professor presents material and students mostly listen and take notes.</p>
+<p class="ex">The economics lecture on Monday mornings fills a 300-seat hall.</p></div>
+
+<div class="entry"><span class="term">Seminar</span>
+<p>A smaller class built around discussion, where students are expected to participate actively.</p>
+<p class="ex">Come prepared to the seminar — everyone has to contribute to the discussion.</p></div>
+
+<div class="entry"><span class="term">Tutorial</span>
+<p>A small-group session, common in Australia and the UK, where a tutor works through problems and questions from the lectures. Often shortened to "tute" in Australia.</p>
+<p class="ex">The weekly tutorial is where you actually practise what the lecture covered.</p></div>
+
+<div class="entry"><span class="term">Syllabus</span>
+<p>The document describing what a course covers: topics, readings, assessments and deadlines. Read it carefully in week one.</p>
+<p class="ex">The syllabus says the final exam counts for 50% of the mark.</p></div>
+
+<div class="entry"><span class="term">Course / module / unit</span>
+<p>A single subject you study for one semester. Different universities use different words — Sydney says "unit of study", others say "module" or "course".</p>
+<p class="ex">I'm taking four units this semester, including introductory accounting.</p></div>
+
+<div class="entry"><span class="term">Credits (credit points)</span>
+<p>Points you earn for completing each course. You need a set total to graduate.</p>
+<p class="ex">This unit is worth six credit points.</p></div>
+
+<div class="entry"><span class="term">Semester / term</span>
+<p>The blocks the academic year is divided into — usually two semesters, each ending in exams.</p>
+<p class="ex">Semester one ends with exams in June.</p></div>
+
+<div class="entry"><span class="term">Assignment</span>
+<p>Any piece of assessed work you complete outside class, such as an essay, report or problem set.</p>
+<p class="ex">The first assignment is a 1,500-word report due in week five.</p></div>
+
+<div class="entry"><span class="term">Deadline</span>
+<p>The date and time by which work must be submitted. Missing one usually costs marks.</p>
+<p class="ex">The deadline for the essay is Friday at 5 pm sharp.</p></div>
+
+<div class="entry"><span class="term">Extension</span>
+<p>Extra time to submit an assignment, granted if you have a good reason and ask in advance.</p>
+<p class="ex">She was granted a one-week extension because she was ill.</p></div>
+
+<div class="entry"><span class="term">Office hours</span>
+<p>Set times when a professor or tutor is available in their office (or online) for students' questions — free help, use it.</p>
+<p class="ex">I went to office hours to ask about the exam format.</p></div>
+
+<div class="entry"><span class="term">Plagiarism</span>
+<p>Presenting someone else's work or ideas as your own without crediting them. Universities treat it very seriously.</p>
+<p class="ex">The university uses software to detect plagiarism in every submitted essay.</p></div>
+
+<div class="entry"><span class="term">Citation / reference</span>
+<p>The formal note showing where an idea or quote came from. Your reference list at the end of an essay collects them all.</p>
+<p class="ex">Every claim in your essay needs a citation in the correct format.</p></div>
+
+<div class="entry"><span class="term">GPA (grade point average)</span>
+<p>A single number summarising your grades across all courses — the common measure of academic performance.</p>
+<p class="ex">You need a GPA of at least 5.0 to apply for the exchange programme.</p></div>
+
+<div class="entry"><span class="term">Transcript</span>
+<p>The official record of all the courses you have taken and the grades you received.</p>
+<p class="ex">The internship application asked for an official transcript.</p></div>
+
+<div class="entry"><span class="term">Undergraduate / postgraduate</span>
+<p>An undergraduate is studying for a first degree (like a bachelor's); a postgraduate has finished one and is studying further (like a master's).</p>
+<p class="ex">The library has separate study areas for undergraduates and postgraduates.</p></div>
+
+<div class="entry"><span class="term">Major / minor</span>
+<p>Your major is your main subject of specialisation within a degree; a minor is a smaller, secondary one.</p>
+<p class="ex">She's doing a commerce degree with a major in finance and a minor in marketing.</p></div>
+
+<div class="entry"><span class="term">Faculty</span>
+<p>A large academic division of a university, such as the Faculty of Business. In American English it can also mean the teaching staff themselves.</p>
+<p class="ex">The Business School is part of the Faculty of Economics and Business.</p></div>
+
+<div class="entry"><span class="term">Dean</span>
+<p>The senior academic who leads a faculty or school.</p>
+<p class="ex">The Dean welcomed new students at the opening ceremony.</p></div>
+
+<div class="entry"><span class="term">Lecturer / professor / tutor</span>
+<p>A lecturer teaches courses; professor is a senior academic title; a tutor runs small-group tutorials. In Australia and the UK, not every teacher is called "professor".</p>
+<p class="ex">Our lecturer covers the theory, and the tutor helps us apply it in tutorials.</p></div>
+
+<div class="entry"><span class="term">Enrolment</span>
+<p>Officially registering for your degree or for specific courses each semester.</p>
+<p class="ex">Enrolment for semester two opens in early November.</p></div>
+
+<div class="entry"><span class="term">Orientation (O-Week / freshers' week)</span>
+<p>The introduction week before classes start, with campus tours, information sessions and social events. Called "O-Week" in Australia.</p>
+<p class="ex">Sign up for clubs during O-Week — it's the easiest time to meet people.</p></div>
+
+<div class="entry"><span class="term">Campus</span>
+<p>The university's grounds and buildings — lecture halls, libraries, cafés and everything in between.</p>
+<p class="ex">The campus has three libraries and its own gym.</p></div>
+
+<div class="entry"><span class="term">Student union / student society</span>
+<p>The student union is the organisation representing students; societies (or clubs) are student groups for hobbies, sports and career interests.</p>
+<p class="ex">She joined the business society through the student union.</p></div>
+
+<div class="entry"><span class="term">Exam / finals / mid-terms</span>
+<p>Formal tests. "Mid-terms" happen partway through the semester; "finals" are the big exams at the end.</p>
+<p class="ex">The library is packed during finals.</p></div>
+
+<div class="entry"><span class="term">Group work / group project</span>
+<p>An assignment completed by a team of students together — very common in business degrees.</p>
+<p class="ex">Half our marketing grade comes from a group project and presentation.</p></div>
+
+<div class="entry"><span class="term">Presentation</span>
+<p>Speaking in front of the class to explain your work, usually with slides. A core skill in business programmes.</p>
+<p class="ex">Each group gives a ten-minute presentation in the final week.</p></div>
+
+<div class="entry"><span class="term">Internship / placement</span>
+<p>A temporary job, often during holidays, where you gain real work experience. "Placement" is the more British term when it is part of the degree.</p>
+<p class="ex">He did a summer internship at a consulting firm after first year.</p></div>
+
+<div class="entry"><span class="term">Exchange / study abroad</span>
+<p>Spending a semester or year studying at a partner university in another country.</p>
+<p class="ex">She spent her exchange semester at a university in Singapore.</p></div>
+
+<div class="entry"><span class="term">Scholarship</span>
+<p>Money awarded to a student to help pay for their studies, usually based on merit or need — it does not have to be repaid.</p>
+<p class="ex">He won a scholarship that covers half his tuition fees.</p></div>
+
+<div class="entry"><span class="term">Dissertation / thesis</span>
+<p>A long piece of independent research written towards the end of a degree. Less common in bachelor's programmes, but worth knowing.</p>
+<p class="ex">Final-year students spend months on their dissertation.</p></div>
+
+<a class="top" href="#page-top">↑ back to top</a>
+</section>
+
+<footer>
+<p>All terms are standard first-year business and university vocabulary — none are obscure or invented. One usage note rather than a definition issue: word choices like "unit" vs "module" and "O-Week" vs "freshers' week" vary between universities, so expect small differences between Hult (US-influenced) and Sydney (Australian) usage.</p>
+<button id="restore-cards" type="button">Restore removed cards</button>
+<details id="backup">
+  <summary>Backup &amp; transfer my progress</summary>
+  <p>Your own cards and removed cards are stored in this browser, not in the file itself. To back them up or move them to another device (or give them to Claude to build into the file), copy the text below. To restore, paste it and press Import.</p>
+  <textarea id="backup-data" rows="4" placeholder="Press Export to see your data, or paste a backup here"></textarea>
+  <div>
+    <button id="export-btn" type="button">Export</button>
+    <button id="import-btn" type="button">Import</button>
+  </div>
+</details>
+</footer>
+
+<script>
+(function () {
+  var input = document.getElementById('search');
+  var clearBtn = document.getElementById('clear-search');
+  var noResults = document.getElementById('no-results');
+  var sections = Array.prototype.slice.call(document.querySelectorAll('section'));
+  var entries = [];
+  var allRevealed = false;
+
+  var LS_DELETED = 'glossaryDeleted';
+  var LS_CUSTOM = 'glossaryCustom';
+  function lsGet(key) {
+    try { return JSON.parse(localStorage.getItem(key)) || []; } catch (e) { return []; }
+  }
+  function lsSet(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+  }
+  function slug(text) {
+    return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  }
+
+  var deletedIds = lsGet(LS_DELETED);
+  var customCards = lsGet(LS_CUSTOM);
+
+  // --- Card setup (flip, delete button, keyboard) ---
+  function initEntry(e) {
+    if (!e.querySelector('.del')) {
+      var del = document.createElement('button');
+      del.className = 'del';
+      del.type = 'button';
+      del.textContent = '✓ learnt — remove card';
+      e.appendChild(del);
+    }
+    e.dataset.orig = e.innerHTML;
+    e.setAttribute('role', 'button');
+    e.setAttribute('tabindex', '0');
+    e.addEventListener('click', function (ev) {
+      if (ev.target.closest('.del')) { deleteEntry(e); return; }
+      e.classList.toggle('flipped');
+    });
+    e.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        e.classList.toggle('flipped');
+      }
+    });
+    entries.push(e);
+  }
+
+  function deleteEntry(e) {
+    if (!confirm('Remove this card? You can bring built-in cards back with "Restore removed cards".')) return;
+    if (e.dataset.custom) {
+      customCards = customCards.filter(function (c) { return String(c.id) !== e.dataset.id; });
+      lsSet(LS_CUSTOM, customCards);
+    } else {
+      if (deletedIds.indexOf(e.dataset.id) === -1) deletedIds.push(e.dataset.id);
+      lsSet(LS_DELETED, deletedIds);
+    }
+    entries = entries.filter(function (x) { return x !== e; });
+    e.remove();
+  }
+
+  // Initialise built-in cards, removing any the user marked as learnt
+  Array.prototype.slice.call(document.querySelectorAll('.entry')).forEach(function (e) {
+    var termEl = e.querySelector('.term');
+    e.dataset.id = slug(termEl ? termEl.textContent : e.textContent);
+    if (deletedIds.indexOf(e.dataset.id) !== -1) { e.remove(); return; }
+    initEntry(e);
+  });
+
+  // --- Custom cards ---
+  function buildCustomCard(c) {
+    var e = document.createElement('div');
+    e.className = 'entry';
+    e.dataset.custom = '1';
+    e.dataset.id = String(c.id);
+    var term = document.createElement('span');
+    term.className = 'term';
+    term.textContent = c.term;
+    var badge = document.createElement('span');
+    badge.className = 'custom-badge';
+    badge.textContent = '★ my card';
+    term.appendChild(badge);
+    e.appendChild(term);
+    var def = document.createElement('p');
+    def.textContent = c.def;
+    e.appendChild(def);
+    if (c.ex) {
+      var ex = document.createElement('p');
+      ex.className = 'ex';
+      ex.textContent = c.ex;
+      e.appendChild(ex);
+    }
+    var sec = document.getElementById(c.sec) || document.getElementById('biz');
+    sec.insertBefore(e, sec.querySelector('.top'));
+    initEntry(e);
+  }
+  customCards.forEach(buildCustomCard);
+
+  document.getElementById('save-card').addEventListener('click', function () {
+    var term = document.getElementById('new-term').value.trim();
+    var def = document.getElementById('new-def').value.trim();
+    var ex = document.getElementById('new-ex').value.trim();
+    var sec = document.getElementById('new-sec').value;
+    if (!term || !def) { alert('Please fill in at least the term and the explanation.'); return; }
+    var card = { id: Date.now(), term: term, def: def, ex: ex, sec: sec };
+    customCards.push(card);
+    lsSet(LS_CUSTOM, customCards);
+    buildCustomCard(card);
+    document.getElementById('new-term').value = '';
+    document.getElementById('new-def').value = '';
+    document.getElementById('new-ex').value = '';
+    document.getElementById('add-card').removeAttribute('open');
+    filter();
+  });
+
+  document.getElementById('restore-cards').addEventListener('click', function () {
+    lsSet(LS_DELETED, []);
+    location.reload();
+  });
+
+  // --- Backup / transfer ---
+  document.getElementById('export-btn').addEventListener('click', function () {
+    document.getElementById('backup-data').value = JSON.stringify({
+      custom: lsGet(LS_CUSTOM),
+      deleted: lsGet(LS_DELETED)
+    });
+    document.getElementById('backup-data').select();
+  });
+  document.getElementById('import-btn').addEventListener('click', function () {
+    try {
+      var data = JSON.parse(document.getElementById('backup-data').value);
+      if (data.custom) lsSet(LS_CUSTOM, data.custom);
+      if (data.deleted) lsSet(LS_DELETED, data.deleted);
+      location.reload();
+    } catch (e) {
+      alert('That does not look like a valid backup. Paste exactly what Export produced.');
+    }
+  });
+
+  // --- Reveal / hide all ---
+  var toggleAll = document.getElementById('toggle-all');
+  toggleAll.addEventListener('click', function () {
+    allRevealed = !allRevealed;
+    entries.forEach(function (e) { e.classList.toggle('flipped', allRevealed); });
+    toggleAll.textContent = allRevealed ? 'Hide all' : 'Reveal all';
+  });
+
+  // --- Search: matches the term (front of the card) only, cards stay face-down ---
+  function highlightTerm(entry, query) {
+    var termEl = entry.querySelector('.term');
+    if (!termEl) return;
+    var walker = document.createTreeWalker(termEl, NodeFilter.SHOW_TEXT);
+    var nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(function (node) {
+      if (node.parentNode.classList && node.parentNode.classList.contains('custom-badge')) return;
+      var text = node.nodeValue;
+      var lower = text.toLowerCase();
+      var idx = lower.indexOf(query);
+      if (idx === -1) return;
+      var frag = document.createDocumentFragment();
+      var pos = 0;
+      while (idx !== -1) {
+        frag.appendChild(document.createTextNode(text.slice(pos, idx)));
+        var mark = document.createElement('mark');
+        mark.textContent = text.slice(idx, idx + query.length);
+        frag.appendChild(mark);
+        pos = idx + query.length;
+        idx = lower.indexOf(query, pos);
+      }
+      frag.appendChild(document.createTextNode(text.slice(pos)));
+      node.parentNode.replaceChild(frag, node);
+    });
+  }
+
+  function termText(entry) {
+    var termEl = entry.querySelector('.term');
+    return (termEl ? termEl.textContent : '').toLowerCase();
+  }
+
+  function filter() {
+    var q = input.value.trim().toLowerCase();
+    clearBtn.style.display = q ? 'block' : 'none';
+    var anyVisible = false;
+
+    entries.forEach(function (entry) {
+      var wasFlipped = entry.classList.contains('flipped');
+      entry.innerHTML = entry.dataset.orig; // reset highlights
+      entry.classList.toggle('flipped', wasFlipped); // keep flip state as the user left it
+      var match = !q || termText(entry).indexOf(q) !== -1;
+      entry.classList.toggle('hidden', !match);
+      if (match && q) highlightTerm(entry, q);
+      if (match) anyVisible = true;
+    });
+
+    sections.forEach(function (sec) {
+      var hasVisible = sec.querySelector('.entry:not(.hidden)') !== null;
+      sec.classList.toggle('hidden', !hasVisible);
+    });
+
+    noResults.style.display = (q && !anyVisible) ? 'block' : 'none';
+  }
+
+  input.addEventListener('input', filter);
+  clearBtn.addEventListener('click', function () {
+    input.value = '';
+    filter();
+    input.focus();
+  });
+})();
+</script>
+</body>
+</html>
