@@ -222,18 +222,6 @@ English is her second language. When editing, preserve these conventions:
     color: #fff;
     cursor: pointer;
   }
-  .del {
-    display: none;
-    margin-top: 0.5rem;
-    font-size: 0.78rem;
-    padding: 0.25rem 0.6rem;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: none;
-    color: var(--muted);
-    cursor: pointer;
-  }
-  .entry.flipped .del { display: inline-block; }
   .custom-badge {
     font-size: 0.7rem;
     color: #2f7d5d;
@@ -262,6 +250,27 @@ English is her second language. When editing, preserve these conventions:
     color: var(--ink);
     cursor: pointer;
   }
+  #level-filter {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+  #level-filter button {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  #level-filter button.active {
+    background: #2f7d5d;
+    color: #fff;
+    border-color: #2f7d5d;
+  }
+  body.quiz-mode #level-filter { display: none; }
   .searchbox { position: relative; margin-bottom: 1rem; }
   #search {
     width: 100%;
@@ -382,6 +391,12 @@ English is her second language. When editing, preserve these conventions:
 <div class="searchbox">
   <input type="search" id="search" placeholder="Search terms… (e.g. inflation, tutorial)" autocomplete="off">
   <button id="clear-search" aria-label="Clear search">✕</button>
+</div>
+<div id="level-filter">
+  <button type="button" data-lv="all" class="active">All</button>
+  <button type="button" data-lv="0">New ○○</button>
+  <button type="button" data-lv="1">Know it ●○</button>
+  <button type="button" data-lv="2">Mastered ●●</button>
 </div>
 <p id="no-results">No matching terms — try a shorter or different word.</p>
 <nav>
@@ -1376,18 +1391,10 @@ English is her second language. When editing, preserve these conventions:
       var termEl = e.querySelector('.term');
       if (termEl) termEl.appendChild(badge);
     }
-    if (!e.querySelector('.del')) {
-      var del = document.createElement('button');
-      del.className = 'del';
-      del.type = 'button';
-      del.textContent = '✓ learnt — remove card';
-      e.appendChild(del);
-    }
     e.dataset.orig = e.innerHTML;
     e.setAttribute('role', 'button');
     e.setAttribute('tabindex', '0');
     e.addEventListener('click', function (ev) {
-      if (ev.target.closest('.del')) { deleteEntry(e); return; }
       if (ev.target.closest('.gotit')) { quizGotIt(e); return; }
       if (ev.target.closest('.lvl')) { levelUp(e); return; }
       e.classList.toggle('flipped');
@@ -1434,11 +1441,6 @@ English is her second language. When editing, preserve these conventions:
       quizGotIt(e);
     }
     updateProgress();
-  }
-
-  function deleteEntry(e) {
-    if (!confirm('Remove this card? You can bring built-in cards back with "Restore removed cards".')) return;
-    doDelete(e);
   }
 
   function doDelete(e) {
@@ -1690,7 +1692,8 @@ English is her second language. When editing, preserve these conventions:
       entry.innerHTML = entry.dataset.orig; // reset highlights
       entry.classList.toggle('flipped', wasFlipped); // keep flip state as the user left it
       applyLevel(entry); // re-render level button and dots
-      var match = !q || termText(entry).indexOf(q) !== -1;
+      var lvMatch = levelFilter === 'all' || (levels[entry.dataset.id] || 0) === levelFilter;
+      var match = lvMatch && (!q || termText(entry).indexOf(q) !== -1);
       entry.classList.toggle('hidden', !match);
       if (match && q) highlightTerm(entry, q);
       if (match) anyVisible = true;
@@ -1709,6 +1712,17 @@ English is her second language. When editing, preserve these conventions:
     input.value = '';
     filter();
     input.focus();
+  });
+
+  // --- Level filter chips ---
+  var levelFilter = 'all';
+  var lvButtons = Array.prototype.slice.call(document.querySelectorAll('#level-filter button'));
+  lvButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      levelFilter = btn.dataset.lv === 'all' ? 'all' : parseInt(btn.dataset.lv, 10);
+      lvButtons.forEach(function (b) { b.classList.toggle('active', b === btn); });
+      filter();
+    });
   });
 })();
 </script>
