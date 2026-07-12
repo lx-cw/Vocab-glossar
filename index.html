@@ -75,6 +75,40 @@ English is her second language. When editing, preserve these conventions:
     background: var(--card);
     border: 1px solid var(--line);
   }
+  .progress-wrap { margin-bottom: 1rem; }
+  .progress-label {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+    display: block;
+  }
+  .progress-track {
+    height: 10px;
+    background: var(--line);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0;
+    background: #2f7d5d;
+    border-radius: 999px;
+    transition: width 0.3s;
+  }
+  #quiz-progress .progress-fill { background: #4a5fa5; }
+  .gotit {
+    display: none;
+    margin-top: 0.5rem;
+    margin-right: 0.4rem;
+    font-size: 0.78rem;
+    padding: 0.25rem 0.6rem;
+    border: 1px solid #4a5fa5;
+    border-radius: 999px;
+    background: #4a5fa5;
+    color: #fff;
+    cursor: pointer;
+  }
+  body.quiz-mode .entry .gotit { display: inline-block; }
   #quiz-bar {
     display: flex;
     align-items: center;
@@ -283,6 +317,10 @@ English is her second language. When editing, preserve these conventions:
 <header>
 <h1>Business English Glossary</h1>
 <p class="howto"><strong>How to use:</strong> each card shows only the English term — tap it to flip and reveal the meaning. Browse one section at a time; no need to memorise anything.</p>
+<div class="progress-wrap" id="progress">
+  <span class="progress-label" id="progress-label"></span>
+  <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+</div>
 <button id="toggle-all" type="button">Reveal all</button>
 <div id="quiz-bar">
   <button id="quiz-btn" type="button">🔀 Random quiz</button>
@@ -323,6 +361,10 @@ English is her second language. When editing, preserve these conventions:
 
 <section id="quiz">
 <h2>Random quiz — tap a card to check yourself</h2>
+<div class="progress-wrap" id="quiz-progress">
+  <span class="progress-label" id="quiz-progress-label"></span>
+  <div class="progress-track"><div class="progress-fill" id="quiz-progress-fill"></div></div>
+</div>
 </section>
 
 <section id="econ">
@@ -1270,6 +1312,13 @@ English is her second language. When editing, preserve these conventions:
 
   // --- Card setup (flip, delete button, keyboard) ---
   function initEntry(e) {
+    if (!e.querySelector('.gotit')) {
+      var got = document.createElement('button');
+      got.className = 'gotit';
+      got.type = 'button';
+      got.textContent = '✔ got it';
+      e.appendChild(got);
+    }
     if (!e.querySelector('.del')) {
       var del = document.createElement('button');
       del.className = 'del';
@@ -1282,6 +1331,7 @@ English is her second language. When editing, preserve these conventions:
     e.setAttribute('tabindex', '0');
     e.addEventListener('click', function (ev) {
       if (ev.target.closest('.del')) { deleteEntry(e); return; }
+      if (ev.target.closest('.gotit')) { quizGotIt(e); return; }
       e.classList.toggle('flipped');
     });
     e.addEventListener('keydown', function (ev) {
@@ -1309,7 +1359,20 @@ English is her second language. When editing, preserve these conventions:
       lsSet(LS_DELETED, deletedIds);
     }
     entries = entries.filter(function (x) { return x !== e; });
+    var wasInQuiz = e.closest('section') && e.closest('section').id === 'quiz';
     e.remove();
+    if (wasInQuiz) { quizDone++; updateQuizProgress(); }
+    updateProgress();
+  }
+
+  // --- Learning progress (learnt = built-in cards removed as learnt) ---
+  function updateProgress() {
+    var learnt = lsGet(LS_DELETED).length;
+    var total = entries.length + learnt;
+    var pct = total ? Math.round(learnt / total * 100) : 0;
+    document.getElementById('progress-label').textContent =
+      learnt + ' of ' + total + ' cards learnt (' + pct + '%)';
+    document.getElementById('progress-fill').style.width = pct + '%';
   }
 
   // Initialise built-in cards, removing any the user marked as learnt
@@ -1348,6 +1411,7 @@ English is her second language. When editing, preserve these conventions:
     initEntry(e);
   }
   customCards.forEach(buildCustomCard);
+  updateProgress();
 
   document.getElementById('save-card').addEventListener('click', function () {
     var term = document.getElementById('new-term').value.trim();
@@ -1364,6 +1428,7 @@ English is her second language. When editing, preserve these conventions:
     document.getElementById('new-ex').value = '';
     document.getElementById('add-card').removeAttribute('open');
     filter();
+    updateProgress();
   });
 
   document.getElementById('restore-cards').addEventListener('click', function () {
@@ -1395,6 +1460,26 @@ English is her second language. When editing, preserve these conventions:
   var quizBtn = document.getElementById('quiz-btn');
   var quizNew = document.getElementById('quiz-new');
   var quizExit = document.getElementById('quiz-exit');
+  var quizTotal = 0, quizDone = 0;
+
+  function updateQuizProgress() {
+    var pct = quizTotal ? Math.round(quizDone / quizTotal * 100) : 0;
+    var label = quizDone + ' / ' + quizTotal + ' done';
+    if (quizTotal && quizDone === quizTotal) label += ' — round complete! 🎉';
+    document.getElementById('quiz-progress-label').textContent = label;
+    document.getElementById('quiz-progress-fill').style.width = pct + '%';
+  }
+
+  function quizGotIt(e) {
+    if (!document.body.classList.contains('quiz-mode')) return;
+    var home = document.getElementById(e.dataset.home);
+    if (home) {
+      e.classList.remove('flipped');
+      home.insertBefore(e, home.querySelector('.top'));
+    }
+    quizDone++;
+    updateQuizProgress();
+  }
 
   function startQuiz() {
     restoreFromQuiz();
@@ -1407,10 +1492,14 @@ English is her second language. When editing, preserve these conventions:
       var j = Math.floor(Math.random() * (i + 1));
       var t = pool[i]; pool[i] = pool[j]; pool[j] = t;
     }
-    pool.slice(0, Math.min(n, pool.length)).forEach(function (e) {
+    var pick = pool.slice(0, Math.min(n, pool.length));
+    pick.forEach(function (e) {
       e.classList.remove('flipped');
       quizSec.appendChild(e);
     });
+    quizTotal = pick.length;
+    quizDone = 0;
+    updateQuizProgress();
     document.body.classList.add('quiz-mode');
     quizBtn.textContent = '🔀 Quiz running…';
     quizNew.hidden = false;
