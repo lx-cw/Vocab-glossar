@@ -1626,7 +1626,16 @@ English is her second language. When editing, preserve these conventions:
       var lv = levels[e.dataset.id] || 0;
       return lv === 2 ? 0.08 : lv === 1 ? 0.33 : 1;
     }
-    var pool = entries.filter(function (e) { return (levels[e.dataset.id] || 0) < 3; }); // no archived cards
+    // Pool respects the level filter: with a level chip active, quiz only those cards.
+    // Otherwise all non-archived cards, weighted by level.
+    var pool = entries.filter(function (e) {
+      var lv = levels[e.dataset.id] || 0;
+      return levelFilter === 'all' ? lv < 3 : lv === levelFilter;
+    });
+    if (!pool.length) {
+      alert('No cards match the current level filter — change the filter and try again.');
+      return;
+    }
     var pick = [];
     var count = Math.min(n, pool.length);
     while (pick.length < count && pool.length) {
@@ -1642,6 +1651,7 @@ English is her second language. When editing, preserve these conventions:
     }
     pick.forEach(function (e) {
       e.classList.remove('flipped');
+      e.classList.remove('hidden'); // quiz cards are always visible, whatever the filter did
       // per-round direction: fixed for term/meaning, coin flip per card for mixed
       e.classList.toggle('rev', direction === 'meaning' || (direction === 'mixed' && Math.random() < 0.5));
       quizSec.appendChild(e);
